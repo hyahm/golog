@@ -11,11 +11,11 @@ func main() {
 	defer golog.Sync()
 	golog.ShowBasePath = true
 	a := golog.NewLog("", 0, false, 10)
-	a.Info("foo", "aaaa", "bb")
-	a.Info(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
+	a.Debugf("foo", "aaaa", "bb")
+	a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
 	golog.Level = golog.DEBUG
 	test()
-	golog.Info("bar")
+	golog.Error("bar")
 	time.Sleep(10 * time.Second)
 
 }

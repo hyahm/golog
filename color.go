@@ -13,6 +13,7 @@ type levelColors struct {
 	mu    *sync.RWMutex
 }
 
+// 初始化颜色
 func init() {
 	logColor = &levelColors{
 		mu:    &sync.RWMutex{},
