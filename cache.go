@@ -2,7 +2,6 @@ package golog
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +43,7 @@ func clean(ctx context.Context, dir, name string) {
 	for {
 		select {
 		case <-time.After(time.Duration(cleanTime) * time.Hour * 24):
-			fs, err := ioutil.ReadDir(dir)
+			fs, err := os.ReadDir(dir)
 			if err != nil {
 				continue
 			}
