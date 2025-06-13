@@ -32,19 +32,39 @@ type Log struct {
 	cancel   context.CancelFunc
 }
 
+// 递归遍历文件夹
+func (l *Log) walkDir() error {
+	return filepath.Walk(l.Dir, func(fp string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// 如果是文件，打印文件路径和修改时间
+		if !info.IsDir() && strings.Contains(fp, l.Name) {
+
+			modTime := info.ModTime()
+			if int(time.Since(modTime).Hours()/24) > l.Expire {
+				os.Remove(fp)
+			}
+			fmt.Printf("文件: %s, 修改时间: %s\n", fp, modTime)
+		}
+		return nil
+	})
+}
+
 func (l *Log) clean(ctx context.Context) {
 	for {
 		select {
-		case <-time.After(time.Duration(l.Expire) * time.Hour * 24):
-			fs, err := os.ReadDir(l.Dir)
-			if err != nil {
-				continue
-			}
-			for _, f := range fs {
-				if strings.Contains(f.Name(), l.Name) {
-					os.Remove(filepath.Join(logPath, f.Name()))
-				}
-			}
+		case <-time.After(time.Duration(l.Expire) * time.Second * 10):
+			l.walkDir()
+			// fs, err := os.ReadDir(l.Dir)
+			// if err != nil {
+			// 	continue
+			// }
+			// for _, f := range fs {
+			// 	if strings.Contains(f.Name(), l.Name) {
+			// 		os.Remove(filepath.Join(logPath, f.Name()))
+			// 	}
+			// }
 		case <-ctx.Done():
 			return
 		}
@@ -76,8 +96,8 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	var ctx context.Context
 
 	if l.Name != "." && l.Expire > 0 {
-		os.OpenFile("cccc", os.O_CREATE, 0744)
-		ctx, l.cancel = context.WithCancel(context.Background())
+		// os.OpenFile("cccc", os.O_CREATE, 0744)
+		d, l.cancel = context.WithCancel(context.Background())
 		go l.clean(ctx)
 	}
 	return l
