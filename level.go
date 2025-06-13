@@ -3,7 +3,7 @@ package golog
 type level int
 
 const (
-	All level = iota * 10
+	ALL level = iota * 10
 	TRACE
 	DEBUG
 	INFO
@@ -17,6 +17,8 @@ var Level level = INFO
 
 func (l level) String() string {
 	switch l {
+	case 0:
+		return "ALL"
 	case 10:
 		return "TRACE"
 	case 20:

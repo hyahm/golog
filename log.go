@@ -217,7 +217,7 @@ func s(level level, msg string, deep ...int) {
 		}
 
 	}
-
+	// 写入缓存
 	now := time.Now()
 	ml := msgLog{
 		Msg:      msg,

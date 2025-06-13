@@ -24,6 +24,24 @@ func (lm *msgLog) control() {
 		return
 	} else {
 		// 写入文件
+		if lm.size > 0 {
+			f, err := os.Open(lm.logPath)
+			if err == nil {
+				// 如果大于设定值， 那么
+				fi, err := f.Stat()
+				if err == nil && fi.Size() >= lm.size*1024 {
+					f.Close()
+					err = os.Rename(lm.logPath, filepath.Join(lm.path, fmt.Sprintf("%s_%s", lm.create.Format("2006-01-02_15:04:05"), lm.name)))
+					if err != nil {
+						log.Println(err)
+					}
+
+				}
+				f.Close()
+			}
+
+		}
+
 		if everyDay {
 			// 如果每天备份的话， 文件名需要更新
 			thisDay := fmt.Sprintf("%d-%d-%d", lm.create.Year(), lm.create.Month(), lm.create.Day())
@@ -38,23 +56,6 @@ func (lm *msgLog) control() {
 					return
 				}
 				nowday = thisDay
-			}
-
-		}
-		if lm.size > 0 {
-			f, err := os.Open(lm.logPath)
-			if err == nil {
-				// 如果大于设定值， 那么
-				fi, err := f.Stat()
-				if err == nil && fi.Size() >= lm.size*1024 {
-					f.Close()
-					err = os.Rename(lm.logPath, filepath.Join(lm.path, fmt.Sprintf("%d_%s", lm.create.Unix(), lm.name)))
-					if err != nil {
-						log.Println(err)
-					}
-
-				}
-				f.Close()
 			}
 
 		}
