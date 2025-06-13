@@ -1,10 +1,10 @@
-# golog  simple powerful
+# golog  simple easy log library
 
-异步简单易用功能想打的日志库
+异步简单易用的日志库
 
 ### 安装
 ```
- go get github.com/hyahm/golog@master
+ go get github.com/hyahm/golog
 ```
 
 ### 日志格式化(text/template模板语法)
@@ -24,7 +24,8 @@ func main() {
 	defer golog.Sync()
 	golog.Info("one") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - one
 	golog.Info("adf", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - adf cander
-	
+	golog.ShowBasePath = true
+	golog.Info("adf", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - example.go:9 - adf cander
 }
 ```
 
