@@ -4,7 +4,7 @@
 
 ### 安装
 ```
- go get github.com/hyahm/golog
+ go get github.com/hyahm/golog@main
 ```
 
 ### 日志格式化(text/template模板语法)
