@@ -22,7 +22,7 @@ type Log struct {
 	Mu       *sync.RWMutex
 	Line     string
 	Out      bool
-	Path     string
+	FilePath string
 	Dir      string
 	Size     int64
 	EveryDay bool
@@ -39,10 +39,10 @@ func (l *Log) walkDir() error {
 			return err
 		}
 		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() && strings.Contains(fp, l.Name) {
+		if !info.IsDir() && strings.Contains(info.Name(), l.Name) {
 
 			modTime := info.ModTime()
-			if int(time.Since(modTime).Hours()/24) > l.Expire {
+			if time.Since(modTime) > time.Duration(l.Expire)*DefaultUnit {
 				os.Remove(fp)
 			}
 		}
@@ -53,7 +53,7 @@ func (l *Log) walkDir() error {
 func (l *Log) clean(ctx context.Context) {
 	for {
 		select {
-		case <-time.After(time.Duration(l.Expire) * time.Second * 10):
+		case <-time.After(time.Duration(l.Expire) * DefaultUnit):
 			l.walkDir()
 
 			// fs, err := os.ReadDir(l.Dir)
@@ -82,7 +82,7 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	l := &Log{
 		Label:    make(map[string]string),
 		Mu:       &sync.RWMutex{},
-		Path:     path,
+		FilePath: path,
 		Size:     size,
 		EveryDay: everyday,
 		Expire:   expire,
@@ -245,10 +245,6 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		}
 
 	}
-	// pre := ""
-	// for k, v := range l.Label {
-	// 	pre += fmt.Sprintf("[%s = %s]", k, v)
-	// }
 	if l.Format == "" {
 		l.Format = Format
 	}
@@ -262,12 +258,13 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		Color:    GetColor(level),
 		Line:     printFileline(0),
 		out:      l.Name == "." || l.Name == "",
-		path:     l.Dir,
-		logPath:  l.Path,
+		filepath: l.FilePath,
+		dir:      l.Dir,
 		Hostname: hostname,
 		name:     l.Name,
 		size:     l.Size,
 		format:   l.Format,
+		everyDay: l.EveryDay,
 		Label:    l.GetLabel(),
 	}
 	if ShowBasePath {

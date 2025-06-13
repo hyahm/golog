@@ -11,15 +11,17 @@ import (
 )
 
 var (
-	logPath   string // 文件路径
-	fileSize  int64  // 切割的文件大小
-	everyDay  bool   // 每天一个来切割文件 （这个比上面个优先级高）
-	cleanTime int    = 0
-	dir       string
+	// _logPath   string // 文件路径
+	_fileSize int64  // 切割的文件大小
+	_everyDay bool   // 每天一个来切割文件 （这个比上面个优先级高）
+	_dir      string // 文件目录
+	_filePath string
+	_name     string
+	_expire   int // 过期时间
 )
 
 // 文件名
-var name string
+
 var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
 var label map[string]string
 var labelLock sync.RWMutex
@@ -37,26 +39,26 @@ func init() {
 // size: kb
 func InitLogger(path string, size int64, everyday bool, ct ...int) {
 	if path == "" {
-		logPath = "."
+		_filePath = "."
 		return
 	}
-	name = filepath.Base(path)
-	dir = filepath.Dir(path)
-	logPath = filepath.Clean(path)
+	_name = filepath.Base(path)
 
-	err := os.MkdirAll(dir, 0755)
+	_dir = filepath.Dir(path)
+	_filePath = filepath.Clean(path)
+	err := os.MkdirAll(_dir, 0755)
 	if err != nil {
 		panic(err)
 	}
-	fileSize = size
-	everyDay = everyday
+	_fileSize = size
+	_everyDay = everyday
 	if len(ct) > 0 {
-		cleanTime = ct[0]
+		_expire = ct[0]
 	}
 	var ctx context.Context
-	if logPath != "." && cleanTime > 0 {
+	if _filePath != "." && _expire > 0 {
 		ctx, cancel = context.WithCancel(context.Background())
-		go clean(ctx, dir, name)
+		go clean(ctx)
 	}
 
 }
@@ -222,15 +224,15 @@ func s(level level, msg string, deep ...int) {
 	ml := msgLog{
 		Msg:      msg,
 		Level:    level,
-		name:     name,
+		name:     _name,
 		create:   now,
 		Ctime:    now.Format("2006-01-02 15:04:05"),
 		Color:    GetColor(level),
 		Line:     printFileline(0),
-		out:      logPath == "." || logPath == "",
-		path:     dir,
-		logPath:  logPath,
-		size:     fileSize,
+		out:      _dir == ".",
+		dir:      _dir,
+		filepath: _filePath,
+		size:     _fileSize,
 		Hostname: hostname,
 		format:   Format,
 		Label:    GetLabel(),

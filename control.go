@@ -25,15 +25,17 @@ func (lm *msgLog) control() {
 	} else {
 		// 写入文件
 		if lm.size > 0 {
-			f, err := os.Open(lm.logPath)
+			f, err := os.OpenFile(lm.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 			if err == nil {
 				// 如果大于设定值， 那么
 				fi, err := f.Stat()
 				if err == nil && fi.Size() >= lm.size*1024 {
 					f.Close()
-					err = os.Rename(lm.logPath, filepath.Join(lm.path, fmt.Sprintf("%s_%s", lm.create.Format("2006-01-02_15:04:05"), lm.name)))
+					err = os.Rename(lm.filepath, filepath.Join(lm.dir, fmt.Sprintf("%s_%s", lm.create.Format("2006-01-02_15_04_05"), lm.name)))
 					if err != nil {
 						log.Println(err)
+						lm.out = true
+						return
 					}
 
 				}
@@ -42,20 +44,13 @@ func (lm *msgLog) control() {
 
 		}
 
-		if everyDay {
+		if lm.everyDay {
 			// 如果每天备份的话， 文件名需要更新
-			thisDay := fmt.Sprintf("%d-%d-%d", lm.create.Year(), lm.create.Month(), lm.create.Day())
-			if nowday == "" {
-				nowday = thisDay
-			}
-			if thisDay != nowday {
-				// 重命名
-				if err := os.Rename(lm.logPath, filepath.Join(lm.path, nowday+"_"+lm.name)); err != nil {
-					log.Println(err)
-					lm.out = true
-					return
-				}
-				nowday = thisDay
+			// 重命名
+			if err := os.Rename(lm.filepath, filepath.Join(lm.dir, lm.create.Format("2006-01-02")+"_"+lm.name)); err != nil {
+				log.Println(err)
+				lm.out = true
+				return
 			}
 
 		}
@@ -68,10 +63,9 @@ func (lm *msgLog) control() {
 func (lm *msgLog) writeToFile() {
 	//
 	//不存在就新建
-	f, err := os.OpenFile(lm.logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(lm.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		// 如果失败，切换到控制台输出
-		color.Red("Permission denied,  auto change to Stdout")
 		lm.out = true
 		lm.printLine()
 		return

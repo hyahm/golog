@@ -2,6 +2,7 @@ package golog
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,6 @@ import (
 )
 
 type msgLog struct {
-	logPath string
 	// Prev    string    // 深度对于的路径
 	Msg    string    // 日志信息
 	Level  level     // 日志级别
@@ -21,9 +21,11 @@ type msgLog struct {
 	Color    []color.Attribute // 颜色
 	Line     string            // 行号
 	out      bool              // 文件还是控制台
-	path     string
+	filepath string
+	dir      string
 	name     string
 	size     int64 // 文件大小
+	everyDay bool
 	format   string
 	Hostname string
 	Label    map[string]string
@@ -39,19 +41,35 @@ func init() {
 
 }
 
-func clean(ctx context.Context, dir, name string) {
+// 递归遍历文件夹
+func walkDir() error {
+	fmt.Println(time.Now())
+	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
+		if err != nil {
+			Error(err)
+			return err
+		}
+
+		// 如果是文件，打印文件路径和修改时间
+		if !info.IsDir() && strings.Contains(fp, _name) {
+
+			modTime := info.ModTime()
+			fmt.Println(fp, "-------", time.Since(modTime), "remove time:", time.Duration(_expire)*DefaultUnit)
+
+			if time.Since(modTime) > time.Duration(_expire)*DefaultUnit {
+				os.Remove(fp)
+			}
+		}
+		return nil
+	})
+}
+
+func clean(ctx context.Context) {
 	for {
 		select {
-		case <-time.After(time.Duration(cleanTime) * time.Hour * 24):
-			fs, err := os.ReadDir(dir)
-			if err != nil {
-				continue
-			}
-			for _, f := range fs {
-				if strings.Contains(f.Name(), name) {
-					os.Remove(filepath.Join(logPath, f.Name()))
-				}
-			}
+		case <-time.After(time.Duration(_expire) * DefaultUnit):
+			fmt.Println("clean log")
+			walkDir()
 		case <-ctx.Done():
 			return
 		}
