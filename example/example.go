@@ -1,6 +1,9 @@
 package main
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/fatih/color"
 	"github.com/hyahm/golog"
 )
@@ -11,13 +14,11 @@ func main() {
 	golog.DefaultUnit = golog.Second
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	a := golog.NewLog("log/a.log", 1024, false, 10)
-	for {
-		a.Debugf("foo", "aaaa", "bb")
-		a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
-		golog.Level = golog.DEBUG
-		// test()
-		a.Error("bar")
-	}
+	a.Debugf("foo", "aaaa", "bb")
+	a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
+	golog.Level = golog.DEBUG
+	// test()
+	a.Error("bar")
 
 	// for {
 	// 	golog.Debugf("foo", "aaaa", "bb")
@@ -26,7 +27,7 @@ func main() {
 	// 	test()
 	// 	golog.Error("bar")
 	// }
-
+	http.ListenAndServe(":6060", nil)
 }
 
 // func test() {
