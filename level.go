@@ -1,6 +1,8 @@
 package golog
 
-type level int
+// type level int
+type LogLevel int
+type level LogLevel
 
 const (
 	ALL level = iota * 10
@@ -34,4 +36,8 @@ func (l level) String() string {
 	default:
 		return "INFO"
 	}
+}
+
+func (l level) Int() int {
+	return int(l)
 }

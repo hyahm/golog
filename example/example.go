@@ -11,14 +11,16 @@ func main() {
 	golog.DefaultUnit = golog.Second
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	a := golog.NewLog("log/a.log", 1024, false, 10)
-	for {
-		a.Debugf("foo", "aaaa", "bb")
-		a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
-		golog.Level = golog.DEBUG
-		// test()
-		a.Error("bar")
-	}
-
+	a.Debugf("foo", "aaaa", "bb")
+	a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
+	golog.Level = golog.DEBUG
+	// test()
+	a.Error("bar")
+	// engine, err := xorm.NewEngine("mysql", "root:123@/test?charset=utf8")
+	// // See "Important settings" section.
+	// db.SetConnMaxLifetime(time.Minute * 3)
+	// db.SetMaxOpenConns(10)
+	// db.SetMaxIdleConns(10)
 	// for {
 	// 	golog.Debugf("foo", "aaaa", "bb")
 	// 	golog.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
@@ -26,7 +28,6 @@ func main() {
 	// 	test()
 	// 	golog.Error("bar")
 	// }
-
 }
 
 // func test() {

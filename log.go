@@ -20,6 +20,8 @@ var (
 	_expire   int // 过期时间
 )
 
+var ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
+
 // 文件名
 
 var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
@@ -222,20 +224,22 @@ func s(level level, msg string, deep ...int) {
 	// 写入缓存
 	now := time.Now()
 	ml := msgLog{
-		Msg:      msg,
-		Level:    level,
-		name:     _name,
-		create:   now,
-		Ctime:    now.Format("2006-01-02 15:04:05"),
-		Color:    GetColor(level),
-		Line:     printFileline(0),
-		out:      _dir == ".",
-		dir:      _dir,
-		filepath: _filePath,
-		size:     _fileSize,
-		Hostname: hostname,
-		format:   Format,
-		Label:    GetLabel(),
+		Msg:          msg,
+		Level:        level,
+		name:         _name,
+		create:       now,
+		Ctime:        now.Format("2006-01-02 15:04:05"),
+		Color:        GetColor(level),
+		Line:         printFileline(0),
+		out:          _dir == ".",
+		dir:          _dir,
+		filepath:     _filePath,
+		size:         _fileSize,
+		Hostname:     hostname,
+		everyDay:     _everyDay,
+		format:       Format,
+		Label:        GetLabel(),
+		ErrorHandler: ErrorHandler,
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)

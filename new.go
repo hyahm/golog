@@ -15,21 +15,23 @@ import (
 var ShowBasePath bool
 
 type Log struct {
-	Create   time.Time
-	Label    map[string]string
-	Deep     int
-	Color    []color.Attribute
-	Mu       *sync.RWMutex
-	Line     string
-	Out      bool
-	FilePath string
-	Dir      string
-	Size     int64
-	EveryDay bool
-	Name     string
-	Expire   int
-	Format   string
-	cancel   context.CancelFunc
+	Create       time.Time
+	Label        map[string]string
+	Deep         int
+	Color        []color.Attribute
+	Mu           *sync.RWMutex
+	Line         string
+	Out          bool
+	FilePath     string
+	Dir          string
+	Size         int64
+	EveryDay     bool
+	Name         string
+	Expire       int
+	Format       string
+	cancel       context.CancelFunc
+	level        level
+	ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -86,6 +88,7 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 		Size:     size,
 		EveryDay: everyday,
 		Expire:   expire,
+		level:    INFO,
 	}
 	l.Dir = filepath.Dir(path)
 	err := os.MkdirAll(l.Dir, 0755)
@@ -100,6 +103,10 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 		go l.clean(ctx)
 	}
 	return l
+}
+
+func (l *Log) SetErrorHandler(eh func(string, string, string, string, map[string]string)) {
+	l.ErrorHandler = eh
 }
 
 // 关闭log
@@ -143,7 +150,7 @@ func (l *Log) GetLabel() map[string]string {
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Trace(msg ...interface{}) {
 	// Access,
-	if Level <= TRACE {
+	if l.level <= TRACE {
 		l.s(TRACE, arrToString(msg...))
 	}
 }
@@ -157,28 +164,38 @@ func (l *Log) Tracef(format string, msg ...interface{}) {
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Debug(msg ...interface{}) {
 	// debug,
-	if Level <= DEBUG {
+	if l.level <= DEBUG {
 		l.s(DEBUG, arrToString(msg...)+"\n")
 	}
+}
+
+func (l *Log) SetLevel(lv LogLevel) {
+	// Access,
+	l.level = level(lv)
+}
+
+func (l *Log) Level() LogLevel {
+	// Access,
+	return LogLevel(l.level)
 }
 
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Debugf(format string, msg ...interface{}) {
 	// Access,
-	if Level <= DEBUG {
+	if l.level <= DEBUG {
 		l.s(DEBUG, arrToString(msg...))
 	}
 }
 
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Info(msg ...interface{}) {
-	if Level <= INFO {
+	if l.level <= INFO {
 		l.s(INFO, arrToString(msg...)+"\n")
 	}
 }
 func (l *Log) Infof(format string, msg ...interface{}) {
 	// Access,
-	if Level <= INFO {
+	if l.level <= INFO {
 		l.s(INFO, arrToString(msg...))
 	}
 }
@@ -186,14 +203,14 @@ func (l *Log) Infof(format string, msg ...interface{}) {
 // 可以根据下面格式一样，在format 后加上更详细的输出值
 func (l *Log) Warn(msg ...interface{}) {
 	// error日志，添加了错误函数，
-	if Level <= WARN {
+	if l.level <= WARN {
 		l.s(WARN, arrToString(msg...)+"\n")
 	}
 }
 
 func (l *Log) Warnf(format string, msg ...interface{}) {
 	// Access,
-	if Level <= WARN {
+	if l.level <= WARN {
 		l.s(WARN, arrToString(msg...))
 	}
 }
@@ -201,21 +218,21 @@ func (l *Log) Warnf(format string, msg ...interface{}) {
 // 可以根据下面格式一样，在format 后加上更详细的输出值
 func (l *Log) Error(msg ...interface{}) {
 	// error日志，添加了错误函数，
-	if Level <= ERROR {
+	if l.level <= ERROR {
 		l.s(ERROR, arrToString(msg...)+"\n")
 	}
 }
 
 func (l *Log) Errorf(format string, msg ...interface{}) {
 	// Access,
-	if Level <= ERROR {
+	if l.level <= ERROR {
 		l.s(ERROR, arrToString(msg...))
 	}
 }
 
 func (l *Log) Fatal(msg ...interface{}) {
 	// error日志，添加了错误函数，
-	if Level <= FATAL {
+	if l.level <= FATAL {
 		l.s(FATAL, arrToString(msg...)+"\n")
 	}
 	Sync()
@@ -224,14 +241,14 @@ func (l *Log) Fatal(msg ...interface{}) {
 
 func (l *Log) Fatalf(format string, msg ...interface{}) {
 	// Access,
-	if Level <= FATAL {
+	if l.level <= FATAL {
 		l.s(FATAL, arrToString(msg...))
 	}
 }
 
 func (l *Log) UpFunc(deep int, msg ...interface{}) {
 	// deep打印函数的深度， 相对于当前位置向外的深度
-	if Level <= DEBUG {
+	if l.level <= DEBUG {
 		l.s(DEBUG, arrToString(msg...)+"\n", deep)
 	}
 }
@@ -251,21 +268,22 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	now := time.Now()
 	ml := msgLog{
 		// Prev:    pre,
-		Msg:      msg,
-		Level:    level,
-		create:   now,
-		Ctime:    now.Format("2006-01-02 15:04:05"),
-		Color:    GetColor(level),
-		Line:     printFileline(0),
-		out:      l.Name == "." || l.Name == "",
-		filepath: l.FilePath,
-		dir:      l.Dir,
-		Hostname: hostname,
-		name:     l.Name,
-		size:     l.Size,
-		format:   l.Format,
-		everyDay: l.EveryDay,
-		Label:    l.GetLabel(),
+		Msg:          msg,
+		Level:        level,
+		create:       now,
+		Ctime:        now.Format("2006-01-02 15:04:05"),
+		Color:        GetColor(level),
+		Line:         printFileline(0),
+		out:          l.Name == "." || l.Name == "",
+		filepath:     l.FilePath,
+		dir:          l.Dir,
+		Hostname:     hostname,
+		name:         l.Name,
+		size:         l.Size,
+		format:       l.Format,
+		everyDay:     l.EveryDay,
+		Label:        l.GetLabel(),
+		ErrorHandler: l.ErrorHandler,
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)

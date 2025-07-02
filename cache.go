@@ -18,24 +18,25 @@ type msgLog struct {
 	create time.Time // 创建日志的时间
 	Ctime  string
 	// deep     int               // 向外的深度，  Upfunc 才会用到
-	Color    []color.Attribute // 颜色
-	Line     string            // 行号
-	out      bool              // 文件还是控制台
-	filepath string
-	dir      string
-	name     string
-	size     int64 // 文件大小
-	everyDay bool
-	format   string
-	Hostname string
-	Label    map[string]string
+	Color        []color.Attribute // 颜色
+	Line         string            // 行号
+	out          bool              // 文件还是控制台
+	filepath     string
+	dir          string
+	name         string
+	size         int64 // 文件大小
+	everyDay     bool
+	format       string
+	Hostname     string
+	Label        map[string]string
+	ErrorHandler func(string, string, string, string, map[string]string)
 }
 
 var cache chan msgLog
 var exit chan bool
 
 func init() {
-	cache = make(chan msgLog, 100000)
+	cache = make(chan msgLog, 1000)
 	exit = make(chan bool)
 	go write()
 

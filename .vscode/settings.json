@@ -1,3 +1,7 @@
 {
+<<<<<<< HEAD
   "eggHelper.serverPort": 58670
+=======
+  "eggHelper.serverPort": 40304
+>>>>>>> master
 }

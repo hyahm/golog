@@ -13,11 +13,12 @@ import (
 	"github.com/fatih/color"
 )
 
-var nowday string
-
 func (lm *msgLog) control() {
 	// format = printFileline() + format // printfileline()打印出错误的文件和行数
 	// 判断是输出控制台 还是写入文件
+	if lm.Level == ERROR && lm.ErrorHandler != nil {
+		lm.ErrorHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
+	}
 	if lm.out {
 		// 如果是输出到控制台，直接执行就好了
 		lm.printLine()
