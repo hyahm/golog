@@ -1,6 +1,6 @@
 # golog  simple easy log library
 
-异步简单易用的日志库
+异步简单易用的日志库, 全程不需要关闭操作, 开箱即用
 
 ### 安装
 ```
@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	// 这一行主要是防止退出时日志没有写完， 导致看不到日志，  如果对日志要求没那么高的话， 可以不加上这条
 	defer golog.Sync()
 	golog.Info("one") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - one
 	golog.Info("adf", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - adf cander
@@ -191,50 +192,6 @@ func main() {
 	logger2.Info("foo")
 	// 如果这些日志实例在服务器运行中可能会停止，则必须在此日志服务停止时必须关闭
 }
-```
-### 多文件操作关闭
-
-```go
-package main
-
-import (
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	"github.com/hyahm/golog"
-)
-
-func main() {
-	ch := make(chan os.Signal, 1)
-	go func() {
-		log1 := golog.NewLog("aaa.log", 0, false)
-		for {
-			time.Sleep(time.Second)
-			log1.Info("for")
-		}
-		// 这里可以不关闭
-	}()
-
-	go func() {
-		log2 := golog.NewLog("aaa.log", 0, false)
-		for {
-			time.Sleep(time.Second)
-			log2.Info("for")
-			break
-		}
-		// 这里必须关闭
-		log2.Close()
-	}()
-	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT)
-	select {
-	case <-ch:
-		fmt.Println("exit")
-	}
-}
-
 ```
 
 ### 增加ErrorHandler 的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
