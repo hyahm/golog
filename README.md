@@ -242,11 +242,11 @@ func main() {
 
 	defer golog.Sync()
 	
-	ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
+	golog.ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
 		// 可以自定义报警信息， 方便及时知道运行中代码内的错误
-		t.Log("你的代码出问题了")
+		fmt.Println("你的代码出问题了")
 	}
-	Error("aaaaaa")
+	golog.Error("aaaaaa")
 ```
 
 
