@@ -1,9 +1,6 @@
 package main
 
 import (
-	"net/http"
-	_ "net/http/pprof"
-
 	"github.com/fatih/color"
 	"github.com/hyahm/golog"
 )
@@ -19,7 +16,11 @@ func main() {
 	golog.Level = golog.DEBUG
 	// test()
 	a.Error("bar")
-
+	// engine, err := xorm.NewEngine("mysql", "root:123@/test?charset=utf8")
+	// // See "Important settings" section.
+	// db.SetConnMaxLifetime(time.Minute * 3)
+	// db.SetMaxOpenConns(10)
+	// db.SetMaxIdleConns(10)
 	// for {
 	// 	golog.Debugf("foo", "aaaa", "bb")
 	// 	golog.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
@@ -27,7 +28,6 @@ func main() {
 	// 	test()
 	// 	golog.Error("bar")
 	// }
-	http.ListenAndServe(":6060", nil)
 }
 
 // func test() {

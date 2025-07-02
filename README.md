@@ -85,12 +85,16 @@ func main() {
 	// WARN
 	// ERROR
 	// FATAL
+
 	defer golog.Sync()
 	// 虽然是可视化输出， 但是不需要增加\n换行
 	golog.Debug("foo") // stdout: nothing
 	// 通过 golog.Level = golog.DEBUG 可以设置级别为DEBUG
 	golog.Level = golog.DEBUG //
+	
 	golog.Debug("bar")        // stdout: 2022-03-04 10:21:00 - [DEBUG] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:14 - bar
+	golog.ShowBasePath = true  // 显示基本文件，而不是完整路径
+	golog.Debug("baz")         // stdout: 2022-03-04 10:21:00 - [DEBUG] - DESKTOP-NENB5CA - example.go:14 - bar
 }
 ```
 
@@ -147,8 +151,9 @@ import (
 
 func main() {
 	defer golog.Sync()
-	// 设置清除7天以前的日志
-	golog.InitLogger("log/test.log", 0, true, time.Hour*24*7)
+	// 设置清除7小时以前的日志
+	golog.DefaultUnit = golog.Hour  // 设置单为小时
+	golog.InitLogger("log/test.log", 0, true, 7)
 	golog.Infof("adf%s", "cander")
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:13 - adfcander
 }
@@ -232,6 +237,17 @@ func main() {
 
 ```
 
+### 增加ErrorHandler 的回调函数，  方便报警, 只有在调用golog.Error[f]()的时候才会调用
+```go
+
+	defer golog.Sync()
+	
+	ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
+		// 可以自定义报警信息， 方便及时知道运行中代码内的错误
+		t.Log("你的代码出问题了")
+	}
+	Error("aaaaaa")
+```
 
 
 ### 接口方法调试， 可以知道是那一行调用了这个方法
