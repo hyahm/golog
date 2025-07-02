@@ -237,7 +237,7 @@ func main() {
 
 ```
 
-### 增加ErrorHandler 的回调函数，  方便报警, 只有在调用golog.Error[f]()的时候才会调用
+### 增加ErrorHandler 的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
 ```go
 
 	defer golog.Sync()
