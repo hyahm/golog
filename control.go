@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"text/template"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -48,12 +49,13 @@ func (lm *msgLog) control() {
 		if lm.everyDay {
 			// 如果每天备份的话， 文件名需要更新
 			// 重命名
-			if err := os.Rename(lm.filepath, filepath.Join(lm.dir, lm.create.Format("2006-01-02")+"_"+lm.name)); err != nil {
-				log.Println(err)
-				lm.out = true
-				return
+			if lm.create.Format("20060102") != time.Now().Format("20060102") {
+				if err := os.Rename(lm.filepath, filepath.Join(lm.dir, lm.create.Format("2006-01-02")+"_"+lm.name)); err != nil {
+					log.Println(err)
+					lm.out = true
+					return
+				}
 			}
-
 		}
 		// 如果按照文件大小判断的话，名字不变
 		lm.writeToFile()

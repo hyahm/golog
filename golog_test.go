@@ -42,8 +42,10 @@ func TestInitLogger(t *testing.T) {
 	}
 	Error("aaaaaa")
 	// golog.InitLogger("log/a.log", 1024, false, 10)
-	a := NewLog("log/a.log", 1024, false, 10)
-	a.Debugf("foo", "aaaa", "bb")
+	a := NewLog("log/a.log", 1024, true, 10)
+	for range 100 {
+		a.Info("foo", "aaaa", "bb")
+	}
 	a.Warn(color.New(color.BgYellow).Sprint("aaaa"), color.New(color.BgBlue).Sprint("bbbb"))
 	Level = DEBUG
 	// test()

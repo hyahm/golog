@@ -120,13 +120,6 @@ func (l *Log) Close() {
 	l = nil
 }
 
-func (l *Log) AddLabel(key, value string) *Log {
-	l.Mu.Lock()
-	defer l.Mu.Unlock()
-	l.Label[key] = value
-	return l
-}
-
 func (l *Log) SetLabel(key, value string) *Log {
 	l.Mu.Lock()
 	defer l.Mu.Unlock()
