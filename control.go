@@ -17,13 +17,13 @@ import (
 func (lm *msgLog) control() {
 	// format = printFileline() + format // printfileline()打印出错误的文件和行数
 	// 判断是输出控制台 还是写入文件
-	if lm.Level <= ERROR && lm.ErrorHandler != nil {
+	if lm.Level == ERROR && lm.ErrorHandler != nil {
 		lm.ErrorHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
 	}
-	if lm.Level <= INFO && lm.InfoHandler != nil {
+	if lm.Level == INFO && lm.InfoHandler != nil {
 		lm.InfoHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
 	}
-	if lm.Level <= WARN && lm.WarnHandler != nil {
+	if lm.Level == WARN && lm.WarnHandler != nil {
 		lm.WarnHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
 	}
 	if lm.out {
