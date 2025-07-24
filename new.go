@@ -33,6 +33,7 @@ type Log struct {
 	level        level
 	ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
 	InfoHandler  func(ctime, hostname, line, msg string, label map[string]string)
+	WarnHandler  func(ctime, hostname, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -110,6 +111,9 @@ func (l *Log) SetErrorHandler(eh func(string, string, string, string, map[string
 	l.ErrorHandler = eh
 }
 
+func (l *Log) SetWarnHandler(eh func(string, string, string, string, map[string]string)) {
+	l.WarnHandler = eh
+}
 func (l *Log) SetInfoHandler(eh func(string, string, string, string, map[string]string)) {
 	l.InfoHandler = eh
 }
@@ -290,6 +294,7 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		Label:        l.GetLabel(),
 		ErrorHandler: l.ErrorHandler,
 		InfoHandler:  l.InfoHandler,
+		WarnHandler:  l.WarnHandler,
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
