@@ -30,6 +30,7 @@ type msgLog struct {
 	Hostname     string
 	Label        map[string]string
 	ErrorHandler func(string, string, string, string, map[string]string)
+	InfoHandler  func(string, string, string, string, map[string]string)
 }
 
 var cache chan msgLog

@@ -32,6 +32,7 @@ type Log struct {
 	cancel       context.CancelFunc
 	level        level
 	ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
+	InfoHandler  func(ctime, hostname, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -107,6 +108,10 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 
 func (l *Log) SetErrorHandler(eh func(string, string, string, string, map[string]string)) {
 	l.ErrorHandler = eh
+}
+
+func (l *Log) SetInfoHandler(eh func(string, string, string, string, map[string]string)) {
+	l.InfoHandler = eh
 }
 
 // 关闭log
@@ -284,6 +289,7 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		everyDay:     l.EveryDay,
 		Label:        l.GetLabel(),
 		ErrorHandler: l.ErrorHandler,
+		InfoHandler:  l.InfoHandler,
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)

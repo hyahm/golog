@@ -19,6 +19,9 @@ func (lm *msgLog) control() {
 	if lm.Level == ERROR && lm.ErrorHandler != nil {
 		lm.ErrorHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
 	}
+	if lm.Level <= INFO && lm.InfoHandler != nil {
+		lm.InfoHandler(lm.Ctime, lm.Hostname, lm.Line, lm.Msg, lm.Label)
+	}
 	if lm.out {
 		// 如果是输出到控制台，直接执行就好了
 		lm.printLine()

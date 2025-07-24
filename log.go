@@ -21,6 +21,7 @@ var (
 )
 
 var ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
+var InfoHandler func(ctime, hostname, line, msg string, label map[string]string)
 
 // 文件名
 
@@ -240,6 +241,7 @@ func s(level level, msg string, deep ...int) {
 		format:       Format,
 		Label:        GetLabel(),
 		ErrorHandler: ErrorHandler,
+		InfoHandler:  ErrorHandler,
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)

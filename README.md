@@ -194,13 +194,17 @@ func main() {
 }
 ```
 
-### 增加ErrorHandler 的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
+### 增加ErrorHandler , InfoHandler的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
 ```go
-
+	// 为什么只有info 和 error  ， 因为只有这2个开发最常用   warn 和 debug 建议做本地调试使用， 如果要更新细致的处理，建议搭配 label
 	defer golog.Sync()
 	
 	golog.ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
 		// 可以自定义报警信息， 方便及时知道运行中代码内的错误
+		fmt.Println("你的代码出问题了")
+	}
+	golog.ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
+		// 可以对info 信息做处理，
 		fmt.Println("你的代码出问题了")
 	}
 	golog.Error("aaaaaa")
