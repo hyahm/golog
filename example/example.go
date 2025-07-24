@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/fatih/color"
-	"github.com/hyahm/golog"
 )
 
 func main() {
