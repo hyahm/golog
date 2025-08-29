@@ -31,9 +31,9 @@ type Log struct {
 	Format       string
 	cancel       context.CancelFunc
 	level        level
-	ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
-	InfoHandler  func(ctime, hostname, line, msg string, label map[string]string)
-	WarnHandler  func(ctime, hostname, line, msg string, label map[string]string)
+	ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
+	InfoHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
+	WarnHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -107,14 +107,14 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	return l
 }
 
-func (l *Log) SetErrorHandler(eh func(string, string, string, string, map[string]string)) {
+func (l *Log) SetErrorHandler(eh func(time.Time, string, string, string, map[string]string)) {
 	l.ErrorHandler = eh
 }
 
-func (l *Log) SetWarnHandler(eh func(string, string, string, string, map[string]string)) {
+func (l *Log) SetWarnHandler(eh func(time.Time, string, string, string, map[string]string)) {
 	l.WarnHandler = eh
 }
-func (l *Log) SetInfoHandler(eh func(string, string, string, string, map[string]string)) {
+func (l *Log) SetInfoHandler(eh func(time.Time, string, string, string, map[string]string)) {
 	l.InfoHandler = eh
 }
 
@@ -269,13 +269,10 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	}
 	now := time.Now()
 	ml := msgLog{
-		// Prev:    pre,
 		Msg:          msg,
 		Level:        level,
-		create:       now,
-		Ctime:        now.Format("2006-01-02 15:04:05"),
+		Ctime:        now,
 		Color:        GetColor(level),
-		Line:         printFileline(0),
 		out:          l.Name == "." || l.Name == "",
 		filepath:     l.FilePath,
 		dir:          l.Dir,
@@ -291,6 +288,8 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
+	} else {
+		ml.Line = printFileline(0)
 	}
 	cache <- ml
 }

@@ -10,11 +10,9 @@ import (
 	"runtime"
 	"text/template"
 	"time"
-
-	"github.com/fatih/color"
 )
 
-func (lm *msgLog) control() {
+func (lm *msgLog) control(b []byte) {
 	// format = printFileline() + format // printfileline()打印出错误的文件和行数
 	// 判断是输出控制台 还是写入文件
 	if lm.Level == ERROR && lm.ErrorHandler != nil {
@@ -28,96 +26,93 @@ func (lm *msgLog) control() {
 	}
 	if lm.out {
 		// 如果是输出到控制台，直接执行就好了
-		lm.printLine()
+		lm.printLine(b)
 		return
-	} else {
-		// 写入文件
-		if lm.size > 0 {
-			f, err := os.OpenFile(lm.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-			if err == nil {
-				defer f.Close()
-				// 如果大于设定值， 那么
-				fi, err := f.Stat()
-				if err == nil && fi.Size() >= lm.size*1024 {
-					err = os.Rename(lm.filepath, filepath.Join(lm.dir, fmt.Sprintf("%s_%s", lm.create.Format("2006-01-02_15_04_05"), lm.name)))
-					if err != nil {
-						log.Println(err)
-						lm.out = true
-						return
-					}
-
-				}
-			}
-
-		}
-		// size 大小 分割优先
-		if lm.size == 0 && lm.everyDay {
-
-			// 不存在就移动创建
-			if lm.create.Format("20060102") != time.Now().Format("20060102") {
-				oldfile := filepath.Join(lm.dir, lm.create.Format("2006-01-02")+"_"+lm.name)
-				// 如果每天备份的话， 文件名需要更新
-				// 重命名
-				_, err := os.Stat(oldfile)
+	}
+	// 写入文件
+	if lm.size > 0 {
+		f, err := os.OpenFile(lm.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err == nil {
+			defer f.Close()
+			// 如果大于设定值， 那么
+			fi, err := f.Stat()
+			if err == nil && fi.Size() >= lm.size*1024 {
+				err = os.Rename(lm.filepath, filepath.Join(lm.dir, fmt.Sprintf("%s_%s", lm.Ctime.Format("2006-01-02_15_04_05"), lm.name)))
 				if err != nil {
-					// 如果
-					if err := os.Rename(lm.filepath, filepath.Join(lm.dir, oldfile)); err != nil {
-						log.Println(err)
-						lm.out = true
-					}
-
-				}
-				f, err := os.OpenFile(oldfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				if err != nil {
-					// 如果失败，切换到控制台输出
+					log.Println(err)
 					lm.out = true
-					lm.printLine()
 					return
 				}
-				defer f.Close()
-				buf, err := lm.formatText()
-				if err != nil {
-					return
-				}
-				// buf.WriteString("\n")
-				// logMsg := fmt.Sprintf("%s - [%s] - %s - %s - %s - %v\n", lm.Ctime, lm.Level, lm.Prev, lm.Hostname, lm.Line, lm.Msg)
-				f.Write([]byte(buf.Bytes()))
-				return
+
 			}
 		}
-		// 如果按照文件大小判断的话，名字不变
-		lm.writeToFile()
 
 	}
+	// size 大小 分割优先
+	if lm.size == 0 && lm.everyDay {
+
+		// 不存在就移动创建
+		if lm.Ctime.Format("20060102") != time.Now().Format("20060102") {
+			oldfile := filepath.Join(lm.dir, lm.Ctime.Format("2006-01-02")+"_"+lm.name)
+			// 如果每天备份的话， 文件名需要更新
+			// 重命名
+			_, err := os.Stat(oldfile)
+			if err != nil {
+				// 如果
+				if err := os.Rename(lm.filepath, filepath.Join(lm.dir, oldfile)); err != nil {
+					log.Println(err)
+					lm.out = true
+				}
+
+			}
+			f, err := os.OpenFile(oldfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+			if err != nil {
+				// 如果失败，切换到控制台输出
+				lm.out = true
+				lm.printLine(b)
+				return
+			}
+			defer f.Close()
+			// buf, err := lm.formatText()
+			// if err != nil {
+			// 	return
+			// }
+			// buf.WriteString("\n")
+			// logMsg := fmt.Sprintf("%s - [%s] - %s - %s - %s - %v\n", lm.Ctime, lm.Level, lm.Prev, lm.Hostname, lm.Line, lm.Msg)
+			f.Write(b)
+			return
+		}
+	}
+	// 如果按照文件大小判断的话，名字不变
+	lm.writeToFile(b)
+
 }
 
-func (lm *msgLog) writeToFile() {
+func (lm *msgLog) writeToFile(b []byte) {
 	//
 	//不存在就新建
 	f, err := os.OpenFile(lm.filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		// 如果失败，切换到控制台输出
 		lm.out = true
-		lm.printLine()
+		lm.printLine(b)
 		return
 	}
 	defer f.Close()
-	buf, err := lm.formatText()
-	if err != nil {
-		return
-	}
+	// buf, err := lm.formatText()
+	// if err != nil {
+	// 	return
+	// }
 	// buf.WriteString("\n")
 	// logMsg := fmt.Sprintf("%s - [%s] - %s - %s - %s - %v\n", lm.Ctime, lm.Level, lm.Prev, lm.Hostname, lm.Line, lm.Msg)
-	f.Write([]byte(buf.Bytes()))
+	f.Write(b)
 
 }
 
-func (lm *msgLog) printLine() {
-	buf, err := lm.formatText()
-	if err != nil {
-		return
-	}
-	color.New(lm.Color...).Print(buf.String())
+func (lm *msgLog) printLine(b []byte) {
+	// color.New(lm.Color...).Print(string(b))
+	fmt.Fprint(os.Stdout, string(b))
+	// log.Print(os.Stdout, b)
 	// color.New(lm.Color...).Printf("%s - [%s] - %s - %s - %s - %v\n", lm.Ctime, lm.Level, lm.Prev, lm.Hostname, lm.Line, lm.Msg)
 }
 

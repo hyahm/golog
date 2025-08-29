@@ -1,6 +1,7 @@
 package golog
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -13,10 +14,9 @@ import (
 
 type msgLog struct {
 	// Prev    string    // 深度对于的路径
-	Msg    string    // 日志信息
-	Level  level     // 日志级别
-	create time.Time // 创建日志的时间
-	Ctime  string
+	Msg   string // 日志信息
+	Level level  // 日志级别
+	Ctime time.Time
 	// deep     int               // 向外的深度，  Upfunc 才会用到
 	Color        []color.Attribute // 颜色
 	Line         string            // 行号
@@ -29,9 +29,9 @@ type msgLog struct {
 	format       string
 	Hostname     string
 	Label        map[string]string
-	ErrorHandler func(string, string, string, string, map[string]string)
-	InfoHandler  func(string, string, string, string, map[string]string)
-	WarnHandler  func(string, string, string, string, map[string]string)
+	ErrorHandler func(time.Time, string, string, string, map[string]string)
+	InfoHandler  func(time.Time, string, string, string, map[string]string)
+	WarnHandler  func(time.Time, string, string, string, map[string]string)
 }
 
 var cache chan msgLog
@@ -40,13 +40,17 @@ var exit chan bool
 func init() {
 	cache = make(chan msgLog, 1000)
 	exit = make(chan bool)
+	// 增加1024字节的缓存， 也就是假设每一条日志的最大长度是1024
+	b := make([]byte, 0, 1<<20+1024)
+	cacheBuf = bytes.NewBuffer(b)
 	go write()
 
 }
 
+var cacheBuf *bytes.Buffer
+
 // 递归遍历文件夹
 func walkDir() error {
-	fmt.Println(time.Now())
 	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			Error(err)
@@ -55,10 +59,7 @@ func walkDir() error {
 
 		// 如果是文件，打印文件路径和修改时间
 		if !info.IsDir() && strings.Contains(fp, _name) {
-
 			modTime := info.ModTime()
-			fmt.Println(fp, "-------", time.Since(modTime), "remove time:", time.Duration(_expire)*DefaultUnit)
-
 			if time.Since(modTime) > time.Duration(_expire)*DefaultUnit {
 				os.Remove(fp)
 			}
@@ -81,10 +82,28 @@ func clean(ctx context.Context) {
 }
 
 func write() {
-	for c := range cache {
-		c.control()
+	var c msgLog
+	ticker := time.NewTicker(1 * time.Millisecond * 100)
+
+	defer ticker.Stop() // 主函数退出前停止 Ticker，防止 goroutine 泄漏
+	for {
+		select {
+		case <-ticker.C:
+			// 如果写入文件的操作是空闲的， 那么就写入文件
+			if cacheBuf.Len() > 0 {
+				c.control(cacheBuf.Bytes())
+				cacheBuf.Reset()
+			}
+		case c = <-cache:
+			b, err := c.formatText()
+			if err == nil {
+				cacheBuf.Write(b.Bytes())
+			}
+
+		}
+
 	}
-	exit <- true
+
 }
 
 func Sync() {

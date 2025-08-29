@@ -20,9 +20,9 @@ var (
 	_expire   int // 过期时间
 )
 
-var ErrorHandler func(ctime, hostname, line, msg string, label map[string]string)
-var InfoHandler func(ctime, hostname, line, msg string, label map[string]string)
-var WarnHandler func(ctime, hostname, line, msg string, label map[string]string)
+var ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
+var InfoHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
+var WarnHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 
 // 文件名
 
@@ -229,10 +229,8 @@ func s(level level, msg string, deep ...int) {
 		Msg:          msg,
 		Level:        level,
 		name:         _name,
-		create:       now,
-		Ctime:        now.Format("2006-01-02 15:04:05"),
+		Ctime:        now,
 		Color:        GetColor(level),
-		Line:         printFileline(0),
 		out:          _dir == ".",
 		dir:          _dir,
 		filepath:     _filePath,
@@ -247,6 +245,8 @@ func s(level level, msg string, deep ...int) {
 	}
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
+	} else {
+		ml.Line = printFileline(0)
 	}
 
 	cache <- ml
