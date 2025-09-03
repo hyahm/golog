@@ -1,7 +1,6 @@
 package golog
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -12,42 +11,55 @@ import (
 	"github.com/fatih/color"
 )
 
+type task struct {
+	cache chan msgLog
+}
+
 type msgLog struct {
 	// Prev    string    // 深度对于的路径
 	Msg   string // 日志信息
 	Level level  // 日志级别
 	Ctime time.Time
 	// deep     int               // 向外的深度，  Upfunc 才会用到
-	Color        []color.Attribute // 颜色
-	Line         string            // 行号
-	out          bool              // 文件还是控制台
-	filepath     string
-	dir          string
-	name         string
-	size         int64 // 文件大小
-	everyDay     bool
-	format       string
-	Hostname     string
-	Label        map[string]string
-	ErrorHandler func(time.Time, string, string, string, map[string]string)
-	InfoHandler  func(time.Time, string, string, string, map[string]string)
-	WarnHandler  func(time.Time, string, string, string, map[string]string)
+	Color    []color.Attribute // 颜色
+	Line     string            // 行号
+	out      bool              // 文件还是控制台
+	filepath string
+	dir      string
+	name     string
+	size     int64 // 默认单位M
+	everyDay bool
+	format   string
+	Hostname string
+	now      time.Time
+	Label    map[string]string
+	// ErrorHandler func(time.Time, string, string, string, map[string]string)
+	// InfoHandler  func(time.Time, string, string, string, map[string]string)
+	// WarnHandler  func(time.Time, string, string, string, map[string]string)
+	// buf *bytes.Buffer
 }
 
-var cache chan msgLog
-var exit chan bool
+func (ml *msgLog) reset() {
+	ml.Level = 0
+	ml.Msg = ""
+	ml.Ctime = time.Time{}
+	ml.Color = nil
+	ml.Label = nil
+}
+
+// var exit chan bool
+
+var t *task
 
 func init() {
-	cache = make(chan msgLog, 1000)
-	exit = make(chan bool)
+	t = &task{
+		cache: make(chan msgLog, 500),
+	}
+	// exit = make(chan bool)
 	// 增加1024字节的缓存， 也就是假设每一条日志的最大长度是1024
-	b := make([]byte, 0, 1<<20+1024)
-	cacheBuf = bytes.NewBuffer(b)
-	go write()
+	go t.write()
 
 }
-
-var cacheBuf *bytes.Buffer
 
 // 递归遍历文件夹
 func walkDir() error {
@@ -81,33 +93,56 @@ func clean(ctx context.Context) {
 	}
 }
 
-func write() {
-	var c msgLog
-	ticker := time.NewTicker(1 * time.Millisecond * 100)
+// func SecondCache() {
+
+// 	for c := range cache {
+// 		c.control()
+// 	}
+// }
+
+func (t *task) write() {
+	cl := msgLog{
+		// buf: bytes.NewBuffer(nil),
+		// now: time.Now(),
+	}
+	// go SecondCache()
+	ticker := time.NewTicker(1 * time.Second * 1)
 
 	defer ticker.Stop() // 主函数退出前停止 Ticker，防止 goroutine 泄漏
 	for {
 		select {
 		case <-ticker.C:
-			// 如果写入文件的操作是空闲的， 那么就写入文件
-			if cacheBuf.Len() > 0 {
-				c.control(cacheBuf.Bytes())
-				cacheBuf.Reset()
-			}
-		case c = <-cache:
-			b, err := c.formatText()
-			if err == nil {
-				cacheBuf.Write(b.Bytes())
+			if len(cl.Msg) > 0 && time.Since(cl.now).Milliseconds() > 100 {
+				t.control(cl)
+				cl.Msg = ""
+
 			}
 
+		case c := <-t.cache:
+			cl.dir = c.dir
+			cl.out = c.out
+			cl.now = time.Now()
+			cl.filepath = c.filepath
+			cl.name = c.name
+			cl.everyDay = c.everyDay
+			cl.Ctime = c.Ctime
+			cl.size = c.size
+			if len(cl.Msg) < BLOCKSIZE {
+				cl.Msg += c.Msg
+			} else {
+				cl.Msg += c.Msg
+				t.control(cl)
+				cl.Msg = ""
+			}
 		}
-
 	}
 
 }
 
 func Sync() {
-	// 等待日志写完
-	close(cache)
-	<-exit
+	// 等待所有通道写完日志写完, 如果日志量太大， 建议换成zap， zap 的速度是本日志库的约2倍
+
+	close(t.cache)
+	time.Sleep(1 * time.Millisecond * 200)
+
 }

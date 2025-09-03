@@ -12,7 +12,7 @@ import (
 
 var (
 	// _logPath   string // 文件路径
-	_fileSize int64  // 切割的文件大小
+	_fileSize int64  // 切割的文件大小默认单位M
 	_everyDay bool   // 每天一个来切割文件 （这个比上面个优先级高）
 	_dir      string // 文件目录
 	_filePath string
@@ -40,7 +40,7 @@ func init() {
 	labelLock = sync.RWMutex{}
 }
 
-// size: kb
+// size: mb
 func InitLogger(path string, size int64, everyday bool, ct ...int) {
 	if path == "" {
 		_filePath = "."
@@ -155,7 +155,7 @@ func UpFuncf(deep int, format string, args ...interface{}) {
 func Trace(msg ...interface{}) {
 	// Access,
 	if Level <= TRACE {
-		s(TRACE, arrToString(msg...)+"\n")
+		s(TRACE, fmt.Sprint(msg...)+"\n")
 	}
 }
 
@@ -163,14 +163,14 @@ func Trace(msg ...interface{}) {
 func Debug(msg ...interface{}) {
 	// debug,
 	if Level <= DEBUG {
-		s(DEBUG, arrToString(msg...)+"\n")
+		s(DEBUG, fmt.Sprint(msg...)+"\n")
 	}
 }
 
 // open file，  所有日志默认前面加了时间，
 func Info(msg ...interface{}) {
 	if Level <= INFO {
-		s(INFO, arrToString(msg...)+"\n")
+		s(INFO, fmt.Sprint(msg...)+"\n")
 	}
 }
 
@@ -195,7 +195,6 @@ func Fatal(msg ...interface{}) {
 	if Level <= FATAL {
 		s(FATAL, arrToString(msg...)+"\n")
 	}
-	Sync()
 	os.Exit(1)
 }
 
@@ -215,6 +214,7 @@ func arrToString(msg ...interface{}) string {
 }
 
 func s(level level, msg string, deep ...int) {
+
 	if len(deep) > 0 && deep[0] > 0 {
 		if ShowBasePath {
 			msg = fmt.Sprintf("caller from %s -- %v", printBaseFileline(deep[0]), msg)
@@ -223,32 +223,64 @@ func s(level level, msg string, deep ...int) {
 		}
 
 	}
-	// 写入缓存
-	now := time.Now()
-	ml := msgLog{
-		Msg:          msg,
-		Level:        level,
-		name:         _name,
-		Ctime:        now,
-		Color:        GetColor(level),
-		out:          _dir == ".",
-		dir:          _dir,
-		filepath:     _filePath,
-		size:         _fileSize,
-		Hostname:     hostname,
-		everyDay:     _everyDay,
-		format:       Format,
-		Label:        GetLabel(),
-		ErrorHandler: ErrorHandler,
-		InfoHandler:  InfoHandler,
-		WarnHandler:  WarnHandler,
-	}
+
+	// atomic.StoreInt64(&lastTime, time.Now().Unix())
+	// 写入缓存, 增加一个4096 是放置打日志导致丢失
+	// ml := GetPool()
+	ml := msgLog{}
+	ml.name = _name
+	ml.out = _dir == "." || _dir == ""
+	ml.dir = _dir
+	ml.size = _fileSize
+	ml.filepath = _filePath
+	ml.everyDay = _everyDay
+	ml.Hostname = hostname
+	ml.format = Format
+	ml.Level = level
+	ml.Msg = msg
+	ml.Ctime = time.Now()
+	ml.Label = GetLabel()
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
 	} else {
 		ml.Line = printFileline(0)
 	}
 
-	cache <- ml
+	if level == ERROR && ErrorHandler != nil {
+		go ErrorHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	if level == INFO && InfoHandler != nil {
+		go InfoHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	if level == WARN && WarnHandler != nil {
+		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	go func() {
+		ml.Color = GetColor(level)
+		logMsg, _ := ml.formatText()
+		ml.Msg = logMsg.String()
+		// ml.printLine()
+		// fmt.Print(ml.Msg)
+		// fmt.Println(111)
+		// ml.control()
+		t.cache <- ml
+		// ml = nil
+		// ml.reset()
+		// PutPool(ml)
+	}()
+
+	// if ml.BufCache.Len() > 1<<20 {
+	// 	fmt.Println("write bytes")
+	// 	ml.BufCache.Write(logMsg.Bytes())
+	// 	ml.Msg = ml.BufCache.String()
+	// 	ml.BufCache.Reset()
+	// 	cache <- ml
+	// } else {
+	// 	ml.BufCache.Write(logMsg.Bytes())
+
+	// }
 
 }
+
+// 保留上次写入chan 的时间
+// var lastTime int64

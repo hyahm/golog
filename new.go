@@ -31,6 +31,7 @@ type Log struct {
 	Format       string
 	cancel       context.CancelFunc
 	level        level
+	task         *task
 	ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 	InfoHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
 	WarnHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
@@ -57,7 +58,7 @@ func (l *Log) walkDir() error {
 func (l *Log) clean(ctx context.Context) {
 	for {
 		select {
-		case <-time.After(time.Duration(l.Expire) * DefaultUnit):
+		case <-time.After(time.Duration(l.Expire) * BLOCKSIZE):
 			l.walkDir()
 
 			// fs, err := os.ReadDir(l.Dir)
@@ -91,7 +92,11 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 		EveryDay: everyday,
 		Expire:   expire,
 		level:    INFO,
+		task: &task{
+			make(chan msgLog),
+		},
 	}
+	go l.task.write()
 	l.Dir = filepath.Dir(path)
 	err := os.MkdirAll(l.Dir, 0755)
 	if err != nil {
@@ -237,7 +242,6 @@ func (l *Log) Fatal(msg ...interface{}) {
 	if l.level <= FATAL {
 		l.s(FATAL, arrToString(msg...)+"\n")
 	}
-	Sync()
 	os.Exit(1)
 }
 
@@ -264,32 +268,41 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		}
 
 	}
-	if l.Format == "" {
-		l.Format = Format
-	}
-	now := time.Now()
-	ml := msgLog{
-		Msg:          msg,
-		Level:        level,
-		Ctime:        now,
-		Color:        GetColor(level),
-		out:          l.Name == "." || l.Name == "",
-		filepath:     l.FilePath,
-		dir:          l.Dir,
-		Hostname:     hostname,
-		name:         l.Name,
-		size:         l.Size,
-		format:       l.Format,
-		everyDay:     l.EveryDay,
-		Label:        l.GetLabel(),
-		ErrorHandler: l.ErrorHandler,
-		InfoHandler:  l.InfoHandler,
-		WarnHandler:  l.WarnHandler,
-	}
+
+	ml := &msgLog{}
+	ml.Msg = msg
+	ml.Level = level
+	ml.out = l.Name == "." || l.Name == ""
+	ml.filepath = l.FilePath
+	ml.dir = l.Dir
+	ml.Ctime = time.Now()
+	ml.Hostname = hostname
+	ml.name = l.Name
+	ml.size = l.Size
+	ml.format = Format
+	ml.everyDay = l.EveryDay
+	ml.Label = l.GetLabel()
+
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
 	} else {
 		ml.Line = printFileline(0)
 	}
-	cache <- ml
+
+	if level == ERROR && ErrorHandler != nil {
+		go ErrorHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	if level == INFO && InfoHandler != nil {
+		go InfoHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	if level == WARN && WarnHandler != nil {
+		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	go func() {
+		ml.Color = GetColor(level)
+		logMsg, _ := ml.formatText()
+		ml.Msg = logMsg.String()
+		l.task.cache <- *ml
+
+	}()
 }
