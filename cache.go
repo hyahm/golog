@@ -136,7 +136,7 @@ func (t *task) write() {
 
 func Sync() {
 	// 等待所有通道写完日志写完, 如果日志量太大， 建议换成zap， zap 的速度是本日志库的约2倍
-
+	time.Sleep(1 * time.Millisecond * 300)
 	close(t.cache)
 	time.Sleep(1 * time.Millisecond * 200)
 

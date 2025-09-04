@@ -7,7 +7,7 @@ import (
 )
 
 func TestInitLogger(t *testing.T) {
-	Sync()
+	defer Sync()
 	InitLogger("test.log", 1024*10, true, 7)
 	NewLog("test.log", 1024*10, true, 7)
 	ShowBasePath = true

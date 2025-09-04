@@ -65,7 +65,7 @@ func InitLogger(path string, size int64, everyday bool, ct ...int) {
 	once.Do(func() {
 		if _filePath != "." && _expire > 0 {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _filePath, time.Duration(_expire))
+			go clean(ctx, _filePath, time.Duration(_expire)*DefaultUnit)
 		}
 	})
 

@@ -38,6 +38,7 @@ type Log struct {
 
 // 递归遍历文件夹
 func walkDir(dir string, expire time.Duration) error {
+
 	return filepath.Walk(dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -46,7 +47,8 @@ func walkDir(dir string, expire time.Duration) error {
 		if !info.IsDir() {
 
 			modTime := info.ModTime()
-			if time.Since(modTime) > expire*DefaultUnit {
+			fmt.Println(time.Since(modTime))
+			if time.Since(modTime) > expire {
 				os.Remove(fp)
 			}
 		}
@@ -54,10 +56,11 @@ func walkDir(dir string, expire time.Duration) error {
 	})
 }
 
-var clean = func(ctx context.Context, dir string, expire time.Duration) {
+func clean(ctx context.Context, dir string, expire time.Duration) {
 	for {
 		select {
-		case <-time.After(expire * BLOCKSIZE):
+
+		case <-time.After(expire):
 			walkDir(dir, expire)
 
 			// fs, err := os.ReadDir(l.Dir)
@@ -107,7 +110,7 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	once.Do(func() {
 		if _filePath != "." && _expire > 0 {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _filePath, time.Duration(_expire))
+			go clean(ctx, _filePath, time.Duration(_expire)*DefaultUnit)
 		}
 	})
 	return l
