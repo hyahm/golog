@@ -108,9 +108,9 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	var ctx context.Context
 
 	once.Do(func() {
-		if _filePath != "." && _expire > 0 {
+		if l.Dir != "." && expire > 0 && (size > 0 || everyday) {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _filePath, time.Duration(_expire)*DefaultUnit)
+			go clean(ctx, l.Dir, time.Duration(expire)*DefaultUnit)
 		}
 	})
 	return l
