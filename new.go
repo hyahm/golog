@@ -80,7 +80,7 @@ func clean(ctx context.Context, dir, name string, expire time.Duration) {
 	}
 }
 
-// size: kb
+// size: mb
 func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	var expire int
 	path = filepath.Clean(path)
