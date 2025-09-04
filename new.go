@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,14 +38,14 @@ type Log struct {
 }
 
 // 递归遍历文件夹
-func walkDir(dir string, expire time.Duration) error {
+func walkDir(dir, name string, expire time.Duration) error {
 
 	return filepath.Walk(dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() {
+		if !info.IsDir() && strings.Contains(info.Name(), name) {
 
 			modTime := info.ModTime()
 			fmt.Println(time.Since(modTime))
@@ -56,12 +57,12 @@ func walkDir(dir string, expire time.Duration) error {
 	})
 }
 
-func clean(ctx context.Context, dir string, expire time.Duration) {
+func clean(ctx context.Context, dir, name string, expire time.Duration) {
 	for {
 		select {
 
 		case <-time.After(expire):
-			walkDir(dir, expire)
+			walkDir(dir, name, expire)
 
 			// fs, err := os.ReadDir(l.Dir)
 			// if err != nil {
@@ -110,7 +111,7 @@ func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
 	once.Do(func() {
 		if l.Dir != "." && expire > 0 && (size > 0 || everyday) {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, l.Dir, time.Duration(expire)*DefaultUnit)
+			go clean(ctx, l.Dir, l.Name, time.Duration(expire)*DefaultUnit)
 		}
 	})
 	return l

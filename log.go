@@ -65,7 +65,7 @@ func InitLogger(path string, size int64, everyday bool, ct ...int) {
 	once.Do(func() {
 		if _dir != "." && _expire > 0 && (size > 0 || everyday) {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _dir, time.Duration(_expire)*DefaultUnit)
+			go clean(ctx, _dir, _name, time.Duration(_expire)*DefaultUnit)
 		}
 	})
 
