@@ -20,6 +20,8 @@ var (
 	_expire   int // 过期时间
 )
 
+var once = sync.Once{}
+
 var ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 var InfoHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 var WarnHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
@@ -60,10 +62,12 @@ func InitLogger(path string, size int64, everyday bool, ct ...int) {
 		_expire = ct[0]
 	}
 	var ctx context.Context
-	if _filePath != "." && _expire > 0 {
-		ctx, cancel = context.WithCancel(context.Background())
-		go clean(ctx)
-	}
+	once.Do(func() {
+		if _filePath != "." && _expire > 0 {
+			ctx, cancel = context.WithCancel(context.Background())
+			go clean(ctx, _filePath, time.Duration(_expire))
+		}
+	})
 
 }
 

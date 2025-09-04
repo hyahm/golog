@@ -8,6 +8,8 @@ import (
 
 func TestInitLogger(t *testing.T) {
 	Sync()
+	InitLogger("test.log", 1024*10, true, 7)
+	NewLog("test.log", 1024*10, true, 7)
 	ShowBasePath = true
 	DefaultUnit = Hour
 	WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {

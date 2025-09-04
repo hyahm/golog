@@ -1,11 +1,6 @@
 package golog
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -62,36 +57,36 @@ func init() {
 }
 
 // 递归遍历文件夹
-func walkDir() error {
-	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
-		if err != nil {
-			Error(err)
-			return err
-		}
+// func walkDir() error {
+// 	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
+// 		if err != nil {
+// 			Error(err)
+// 			return err
+// 		}
 
-		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() && strings.Contains(fp, _name) {
-			modTime := info.ModTime()
-			if time.Since(modTime) > time.Duration(_expire)*DefaultUnit {
-				os.Remove(fp)
-			}
-		}
-		return nil
-	})
-}
+// 		// 如果是文件，打印文件路径和修改时间
+// 		if !info.IsDir() && strings.Contains(fp, _name) {
+// 			modTime := info.ModTime()
+// 			if time.Since(modTime) > time.Duration(_expire)*DefaultUnit {
+// 				os.Remove(fp)
+// 			}
+// 		}
+// 		return nil
+// 	})
+// }
 
-func clean(ctx context.Context) {
-	for {
-		select {
-		case <-time.After(time.Duration(_expire) * DefaultUnit):
-			fmt.Println("clean log")
-			walkDir()
-		case <-ctx.Done():
-			return
-		}
+// func clean(ctx context.Context) {
+// 	for {
+// 		select {
+// 		case <-time.After(time.Duration(_expire) * DefaultUnit):
+// 			fmt.Println("clean log")
+// 			walkDir()
+// 		case <-ctx.Done():
+// 			return
+// 		}
 
-	}
-}
+// 	}
+// }
 
 // func SecondCache() {
 
