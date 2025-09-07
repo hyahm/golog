@@ -5,7 +5,6 @@ import (
 )
 
 func TestInitLogger(t *testing.T) {
-	defer Sync()
 	SetDir("log")
 
 	// time.Sleep(10 * time.Second)
