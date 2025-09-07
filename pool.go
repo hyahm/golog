@@ -21,54 +21,49 @@
 // Package pool provides internal pool utilities.
 package golog
 
-import (
-	"sync/atomic"
-	"time"
-)
-
 // A Pool is a generic wrapper around [sync.Pool] to provide strongly-typed
 // object pooling.
 //
 // Note that SA6002 (ref: https://staticcheck.io/docs/checks/#SA6002) will
 // not be detected, so all internal pool use must take care to only store
 // pointer types.
-var pool chan *msgLog
+// var pool chan *msgLog
 
-const POOLCOUNT = 1500
+// const POOLCOUNT = 1500
 
-var count int32
+// var count int32
 
-func init() {
-	// 最大1500个内存池
-	pool = make(chan *msgLog, POOLCOUNT)
-}
+// func init() {
+// 	// 最大1500个内存池
+// 	pool = make(chan *msgLog, POOLCOUNT)
+// }
 
-func GetPool() *msgLog {
-	ticker := time.NewTicker(1 * time.Microsecond * 10)
+// func GetPool() *msgLog {
+// 	ticker := time.NewTicker(1 * time.Microsecond * 10)
 
-	defer ticker.Stop() // 主函数退出前停止 Ticker，防止 goroutine 泄漏
+// 	defer ticker.Stop() // 主函数退出前停止 Ticker，防止 goroutine 泄漏
 
-	for {
-		select {
-		case ml := <-pool:
-			atomic.AddInt32(&count, -1)
-			return ml
-		case <-ticker.C:
-			return &msgLog{}
-		}
-	}
-}
+// 	for {
+// 		select {
+// 		case ml := <-pool:
+// 			atomic.AddInt32(&count, -1)
+// 			return ml
+// 		case <-ticker.C:
+// 			return &msgLog{}
+// 		}
+// 	}
+// }
 
-func PutPool(ml *msgLog) {
-	// 如果缓存满了怎么办
-	select {
-	case pool <- ml:
-		atomic.AddInt32(&count, 1)
-	default:
-		// fmt.Println("pool is full--------", atomic.LoadInt32(&count))
-		// 处理 pool 已满的情况，例如：
-		// 1. 丢弃对象
-		// 2. 记录日志
-		// 3. 尝试其他存储方式
-	}
-}
+// func PutPool(ml *msgLog) {
+// 	// 如果缓存满了怎么办
+// 	select {
+// 	case pool <- ml:
+// 		atomic.AddInt32(&count, 1)
+// 	default:
+// 		// fmt.Println("pool is full--------", atomic.LoadInt32(&count))
+// 		// 处理 pool 已满的情况，例如：
+// 		// 1. 丢弃对象
+// 		// 2. 记录日志
+// 		// 3. 尝试其他存储方式
+// 	}
+// }

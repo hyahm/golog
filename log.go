@@ -15,7 +15,6 @@ var (
 	_fileSize int64  // 切割的文件大小默认单位M
 	_everyDay bool   // 每天一个来切割文件 （这个比上面个优先级高）
 	_dir      string // 文件目录
-	_filePath string
 	_name     string
 	_expire   int // 过期时间
 )
@@ -42,30 +41,31 @@ func init() {
 	labelLock = sync.RWMutex{}
 }
 
-// size: mb
-func InitLogger(path string, size int64, everyday bool, ct ...int) {
-	if path == "" {
-		_filePath = "."
-		return
-	}
-	_name = filepath.Base(path)
-
-	_dir = filepath.Dir(path)
-	_filePath = filepath.Clean(path)
+func SetDir(dir string) {
+	_dir = filepath.Clean(dir)
 	err := os.MkdirAll(_dir, 0755)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		_dir = "."
 	}
+}
+
+// name : filename, size: mb,
+func InitLogger(name string, size int64, everyday bool, ct ...int) {
+
+	_name = filepath.Base(name)
+
 	_fileSize = size
 	_everyDay = everyday
 	if len(ct) > 0 {
 		_expire = ct[0]
 	}
-	var ctx context.Context
+
 	once.Do(func() {
-		if _dir != "." && _expire > 0 && (size > 0 || everyday) {
+		var ctx context.Context
+		if _dir != "." && name != "" && _expire > 0 && (size > 0 || everyday) {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _dir, _name, time.Duration(_expire)*DefaultUnit)
+			go clean(ctx, _dir, _name, time.Duration(_expire)*defaultUnit)
 		}
 	})
 
@@ -74,7 +74,7 @@ func InitLogger(path string, size int64, everyday bool, ct ...int) {
 func Close() {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("No need to close")
+			fmt.Println(err)
 		}
 	}()
 	cancel()
@@ -236,7 +236,6 @@ func s(level level, msg string, deep ...int) {
 	ml.out = _dir == "." || _dir == ""
 	ml.dir = _dir
 	ml.size = _fileSize
-	ml.filepath = _filePath
 	ml.everyDay = _everyDay
 	ml.Hostname = hostname
 	ml.format = Format
@@ -260,14 +259,14 @@ func s(level level, msg string, deep ...int) {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
 	go func() {
-		ml.Color = GetColor(level)
+		ml.Color = GetColor(ml.Level)
 		logMsg, _ := ml.formatText()
 		ml.Msg = logMsg.String()
 		// ml.printLine()
 		// fmt.Print(ml.Msg)
 		// fmt.Println(111)
-		// ml.control()
-		t.cache <- ml
+		ml.control()
+		// t.cache <- ml
 		// ml = nil
 		// ml.reset()
 		// PutPool(ml)

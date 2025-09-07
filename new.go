@@ -22,7 +22,6 @@ type Log struct {
 	Mu           *sync.RWMutex
 	Line         string
 	Out          bool
-	FilePath     string
 	Dir          string
 	Size         int64
 	EveryDay     bool
@@ -48,7 +47,6 @@ func walkDir(dir, name string, expire time.Duration) error {
 		if !info.IsDir() && strings.Contains(info.Name(), name) {
 
 			modTime := info.ModTime()
-			fmt.Println(time.Since(modTime))
 			if time.Since(modTime) > expire {
 				os.Remove(fp)
 			}
@@ -80,38 +78,33 @@ func clean(ctx context.Context, dir, name string, expire time.Duration) {
 	}
 }
 
-// size: mb
-func NewLog(path string, size int64, everyday bool, ct ...int) *Log {
+// name : filename, size: mb,
+func NewLog(name string, size int64, everyday bool, ct ...int) *Log {
 	var expire int
-	path = filepath.Clean(path)
+	name = filepath.Base(name)
 	if len(ct) > 0 {
 		expire = ct[0]
 	}
 	l := &Log{
 		Label:    make(map[string]string),
 		Mu:       &sync.RWMutex{},
-		FilePath: path,
+		Dir:      _dir,
 		Size:     size,
 		EveryDay: everyday,
+		Name:     name,
 		Expire:   expire,
 		level:    INFO,
 		task: &task{
 			make(chan msgLog),
 		},
 	}
-	go l.task.write()
-	l.Dir = filepath.Dir(path)
-	err := os.MkdirAll(l.Dir, 0755)
-	if err != nil {
-		panic(err)
-	}
-	l.Name = filepath.Base(path)
-	var ctx context.Context
+	// go l.task.write()
 
 	once.Do(func() {
-		if l.Dir != "." && expire > 0 && (size > 0 || everyday) {
+		var ctx context.Context
+		if _dir != "." && name != "" && expire > 0 && (size > 0 || everyday) {
 			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, l.Dir, l.Name, time.Duration(expire)*DefaultUnit)
+			go clean(ctx, _dir, l.Name, time.Duration(expire)*defaultUnit)
 		}
 	})
 	return l
@@ -132,7 +125,7 @@ func (l *Log) SetInfoHandler(eh func(time.Time, string, string, string, map[stri
 func (l *Log) Close() {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("Not need be close")
+			fmt.Println(err)
 		}
 	}()
 	l.cancel()
@@ -274,11 +267,10 @@ func (l *Log) s(level level, msg string, deep ...int) {
 
 	}
 
-	ml := &msgLog{}
+	ml := msgLog{}
 	ml.Msg = msg
 	ml.Level = level
 	ml.out = l.Name == "." || l.Name == ""
-	ml.filepath = l.FilePath
 	ml.dir = l.Dir
 	ml.Ctime = time.Now()
 	ml.Hostname = hostname
@@ -307,7 +299,8 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		ml.Color = GetColor(level)
 		logMsg, _ := ml.formatText()
 		ml.Msg = logMsg.String()
-		l.task.cache <- *ml
+		ml.control()
+		// l.task.cache <- ml
 
 	}()
 }

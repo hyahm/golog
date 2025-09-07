@@ -19,7 +19,6 @@ type msgLog struct {
 	Color    []color.Attribute // 颜色
 	Line     string            // 行号
 	out      bool              // 文件还是控制台
-	filepath string
 	dir      string
 	name     string
 	size     int64 // 默认单位M
@@ -44,17 +43,17 @@ func (ml *msgLog) reset() {
 
 // var exit chan bool
 
-var t *task
+// var t *task
 
-func init() {
-	t = &task{
-		cache: make(chan msgLog, 500),
-	}
-	// exit = make(chan bool)
-	// 增加1024字节的缓存， 也就是假设每一条日志的最大长度是1024
-	go t.write()
+// func init() {
+// 	t = &task{
+// 		cache: make(chan msgLog),
+// 	}
+// 	// exit = make(chan bool)
+// 	// 增加1024字节的缓存， 也就是假设每一条日志的最大长度是1024
+// 	go t.write()
 
-}
+// }
 
 // 递归遍历文件夹
 // func walkDir() error {
@@ -114,21 +113,27 @@ func (t *task) write() {
 			}
 
 		case c := <-t.cache:
+			if len(c.Color) > 0 {
+				// 有带颜色日志要实时打印
+				t.control(c)
+				continue
+			}
 			cl.dir = c.dir
 			cl.out = c.out
 			cl.now = time.Now()
-			cl.filepath = c.filepath
 			cl.name = c.name
 			cl.everyDay = c.everyDay
 			cl.Ctime = c.Ctime
 			cl.size = c.size
 			if len(cl.Msg) < BLOCKSIZE {
 				cl.Msg += c.Msg
-			} else {
-				cl.Msg += c.Msg
-				t.control(cl)
-				cl.Msg = ""
+				continue
 			}
+			cl.Msg += c.Msg
+			t.control(cl)
+			cl.Msg = ""
+			// default:
+			// 	fmt.Println("xieru  shuju")
 		}
 	}
 
@@ -136,8 +141,8 @@ func (t *task) write() {
 
 func Sync() {
 	// 等待所有通道写完日志写完, 如果日志量太大， 建议换成zap， zap 的速度是本日志库的约2倍
-	time.Sleep(1 * time.Millisecond * 300)
-	close(t.cache)
+	// time.Sleep(1 * time.Millisecond * 300)
+	// close(t.cache)
 	time.Sleep(1 * time.Millisecond * 200)
 
 }

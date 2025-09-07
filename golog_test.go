@@ -1,23 +1,24 @@
 package golog
 
 import (
-	"fmt"
 	"testing"
-	"time"
 )
 
 func TestInitLogger(t *testing.T) {
 	defer Sync()
-	InitLogger("test.log", 1024*10, true, 7)
-	NewLog("test.log", 1024*10, true, 7)
-	ShowBasePath = true
-	DefaultUnit = Hour
-	WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
-		fmt.Println(msg)
-	}
-	ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
-		fmt.Println(msg)
-	}
+	SetDir("log")
+
+	// time.Sleep(10 * time.Second)
+	// InitLogger("aaa/test.log", 10, false, 7)
+	// NewLog("test.log", 10, false, 7)
+	// ShowBasePath = true
+
+	// WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
+	// 	fmt.Println(msg)
+	// }
+	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
+	// 	fmt.Println(msg)
+	// }
 	Warn("警告")
 	Error("失败")
 	// golog.InitLogger("log/a.log", 1024, false, 10)
