@@ -31,6 +31,7 @@ type Log struct {
 	cancel       context.CancelFunc
 	level        level
 	task         *task
+	_logPriority bool
 	ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 	InfoHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
 	WarnHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
@@ -78,6 +79,11 @@ func clean(ctx context.Context, dir, name string, expire time.Duration) {
 	}
 }
 
+// 默认false  也就是性能优先
+func (l *Log) SetLogPriority(logPriority bool) {
+	l._logPriority = logPriority
+}
+
 // name : filename, size: mb,
 func NewLog(name string, size int64, everyday bool, ct ...int) *Log {
 	var expire int
@@ -95,10 +101,12 @@ func NewLog(name string, size int64, everyday bool, ct ...int) *Log {
 		Expire:   expire,
 		level:    INFO,
 		task: &task{
-			make(chan msgLog),
+			cache: make(chan msgLog, 1000),
+			exit:  make(chan struct{}),
+			wg:    &sync.WaitGroup{},
 		},
 	}
-	// go l.task.write()
+	go l.task.write()
 
 	once.Do(func() {
 		var ctx context.Context
@@ -295,12 +303,24 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	if level == WARN && WarnHandler != nil {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
-	go func() {
-		ml.Color = GetColor(level)
+	l.task.wg.Go(func() {
+		if ml.out {
+			// 控制台才添加颜色， 否则不添加颜色
+			ml.Color = GetColor(ml.Level)
+		}
+
 		logMsg, _ := ml.formatText()
 		ml.Msg = logMsg.String()
-		ml.control()
-		// l.task.cache <- ml
+		if l._logPriority {
+			l.task.cache <- ml
+		} else {
+			select {
+			case l.task.cache <- ml:
+			default:
+			}
+		}
 
-	}()
+		// ml.control()
+
+	})
 }

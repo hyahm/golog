@@ -30,6 +30,7 @@ var WarnHandler func(ctime time.Time, hostname, line, msg string, label map[stri
 var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
 var label map[string]string
 var labelLock sync.RWMutex
+var _logPriority bool
 
 // hostname
 var hostname = ""
@@ -48,6 +49,11 @@ func SetDir(dir string) {
 		fmt.Println(err)
 		_dir = "."
 	}
+}
+
+// 默认false  也就是性能优先
+func SetLogPriority(logPriority bool) {
+	_logPriority = logPriority
 }
 
 // name : filename, size: mb,
@@ -258,19 +264,32 @@ func s(level level, msg string, deep ...int) {
 	if level == WARN && WarnHandler != nil {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
-	go func() {
-		ml.Color = GetColor(ml.Level)
+	t.wg.Go(func() {
+		if ml.out {
+			// 控制台才添加颜色， 否则不添加颜色
+			ml.Color = GetColor(ml.Level)
+		}
+
 		logMsg, _ := ml.formatText()
 		ml.Msg = logMsg.String()
 		// ml.printLine()
 		// fmt.Print(ml.Msg)
 		// fmt.Println(111)
-		ml.control()
-		// t.cache <- ml
+		// ml.control()
+		if _logPriority {
+			t.cache <- ml
+		} else {
+			select {
+			case t.cache <- ml:
+			default:
+			}
+		}
+
 		// ml = nil
 		// ml.reset()
 		// PutPool(ml)
-	}()
+
+	})
 
 	// if ml.BufCache.Len() > 1<<20 {
 	// 	fmt.Println("write bytes")
