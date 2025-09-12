@@ -258,13 +258,7 @@ func main() {
 	defer golog.Sync()
 	// 日志文件优先，  会完全保留所有日志，  默认false，  默认性能优先， 日志处理不过来会丢弃， 默认缓冲1000条
 	golog.SetLogPriority(true)
-	golog.Level = golog.DEBUG
-	test()
-	golog.Info("bar")
 }
 
-func test() {
-	// 此方法的日志级别是DEBUG， 所以调试的时候必须将日志级别设置成DEBUG，不然不会显示
-	golog.UpFunc(1, "who call me") // 2022-03-04 10:49:38 - [DEBUG] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:17 - caller from C:/work/golog/example/example.go:11 -- who call me
-}
+
 ```
