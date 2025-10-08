@@ -38,14 +38,14 @@ type Log struct {
 }
 
 // 递归遍历文件夹
-func walkDir(dir, name string, expire time.Duration) error {
+func walkDir(dir string, expire time.Duration, name ...string) error {
 
 	return filepath.Walk(dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() && strings.Contains(info.Name(), name) {
+		if !info.IsDir() && containsSlice(info.Name(), name...) {
 
 			modTime := info.ModTime()
 			if time.Since(modTime) > expire {
@@ -56,12 +56,24 @@ func walkDir(dir, name string, expire time.Duration) error {
 	})
 }
 
-func clean(ctx context.Context, dir, name string, expire time.Duration) {
+func containsSlice(str string, ss ...string) bool {
+	for _, v := range ss {
+		if strings.Contains(str, v) {
+			return true
+		}
+	}
+	return false
+}
+
+func clean(ctx context.Context, dir string, expire time.Duration, name ...string) {
 	for {
 		select {
 
 		case <-time.After(expire):
-			walkDir(dir, name, expire)
+			if len(name) == 0 {
+				return
+			}
+			walkDir(dir, expire, name...)
 
 			// fs, err := os.ReadDir(l.Dir)
 			// if err != nil {
@@ -85,20 +97,15 @@ func (l *Log) SetLogPriority(logPriority bool) {
 }
 
 // name : filename, size: mb,
-func NewLog(name string, size int64, everyday bool, ct ...int) *Log {
-	var expire int
+func NewLog(name string, size int64, everyday bool) *Log {
 	name = filepath.Base(name)
-	if len(ct) > 0 {
-		expire = ct[0]
-	}
+	_names = append(_names, name)
 	l := &Log{
 		Label:    make(map[string]string),
 		Mu:       &sync.RWMutex{},
-		Dir:      _dir,
 		Size:     size,
 		EveryDay: everyday,
 		Name:     name,
-		Expire:   expire,
 		level:    INFO,
 		task: &task{
 			cache: make(chan msgLog, 1000),
@@ -108,13 +115,6 @@ func NewLog(name string, size int64, everyday bool, ct ...int) *Log {
 	}
 	go l.task.write()
 
-	once.Do(func() {
-		var ctx context.Context
-		if _dir != "." && name != "" && expire > 0 && (size > 0 || everyday) {
-			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _dir, l.Name, time.Duration(expire)*defaultUnit)
-		}
-	})
 	return l
 }
 

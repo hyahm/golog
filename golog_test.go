@@ -1,11 +1,12 @@
 package golog
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestInitLogger(t *testing.T) {
-	Sync()
+	defer Sync()
 
 	SetDir("log")
 
@@ -20,8 +21,10 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
+	Info("消息")
 	Warn("警告")
 	Error("失败")
+	fmt.Println(111)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	// a := NewLog("log/a.log", 1024, true, 10)
 	// for range 100 {

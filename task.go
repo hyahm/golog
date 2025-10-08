@@ -73,9 +73,17 @@ func (t *task) write() {
 
 }
 
+var _expireClean time.Duration = time.Hour * 24 * 365
+
+// 设置清理时间 默认365天
+func SetExpireDuration(d time.Duration) {
+
+}
+
 func Sync() {
 	// 等待所有通道写完日志写完,  可以不写，
 	// time.Sleep(1 * time.Millisecond * 300)
+
 	t.wg.Wait()
 	close(t.cache)
 	<-t.exit

@@ -177,7 +177,7 @@ func (task *task) control(cl msgLog) {
 			return
 		}
 	}
-	// 如果按照文件大小判断的话，名字不变
+	// 如果是空的如果按照文件大小判断的话，名字不变
 	cl.writeToFile()
 
 }
@@ -198,8 +198,12 @@ func (lm *msgLog) writeToFile() {
 }
 
 func (lm *msgLog) printLine() {
+	if len(lm.Color) > 0 {
+		color.New(lm.Color...).Print(lm.Msg)
+		return
+	}
 	color.New(lm.Color...).Print(lm.Msg)
-
+	// fmt.Print(lm.Msg)
 }
 
 var tml *template.Template

@@ -12,11 +12,10 @@ import (
 
 var (
 	// _logPath   string // 文件路径
-	_fileSize int64  // 切割的文件大小默认单位M
-	_everyDay bool   // 每天一个来切割文件 （这个比上面个优先级高）
-	_dir      string // 文件目录
+	_fileSize int64          // 切割的文件大小默认单位M
+	_everyDay bool           // 每天一个来切割文件 （这个比上面个优先级高）
+	_dir      string = "log" // 文件目录
 	_name     string
-	_expire   int // 过期时间
 )
 
 var once = sync.Once{}
@@ -34,7 +33,8 @@ var _logPriority bool
 
 // hostname
 var hostname = ""
-var cancel context.CancelFunc
+
+// var cancel context.CancelFunc
 
 func init() {
 	hostname, _ = os.Hostname()
@@ -57,33 +57,32 @@ func SetLogPriority(logPriority bool) {
 }
 
 // name : filename, size: mb,
-func InitLogger(name string, size int64, everyday bool, ct ...int) {
+func InitLogger(name string, size int64, everyday bool) {
 
 	_name = filepath.Base(name)
-
+	_names = append(_names, _name)
 	_fileSize = size
 	_everyDay = everyday
-	if len(ct) > 0 {
-		_expire = ct[0]
-	}
 
-	once.Do(func() {
-		var ctx context.Context
-		if _dir != "." && name != "" && _expire > 0 && (size > 0 || everyday) {
-			ctx, cancel = context.WithCancel(context.Background())
-			go clean(ctx, _dir, _name, time.Duration(_expire)*defaultUnit)
-		}
-	})
+	// once.Do(func() {
+	// 	var ctx context.Context
+	// 	if _dir != "." && name != "" && _expire > 0 && (size > 0 || everyday) {
+	// 		ctx, cancel = context.WithCancel(context.Background())
+	// 		go clean(ctx, _dir, _name, time.Duration(_expire)*defaultUnit)
+	// 	}
+	// })
 
 }
 
-func Close() {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-	cancel()
+var _names = make([]string, 0)
+
+// 清理日志， 请在写入文件初始化后调用即可， 已经是异步处理
+func Clean() {
+	once.Do(func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go clean(ctx, _dir, _expireClean, _names...)
+	})
 }
 
 func AddLabel(key, value string) {

@@ -136,10 +136,12 @@ func main() {
 	// 第四个是删除多少天以前的日志，当前设置的是7天， 根据设置的name 来匹配， 不写或者0表示不删除
 	// 没错，写入文件就是只需要增加这一行即可
 	// 为了性能， 所有实例的日志统一一个目录下面， 这样的话只需要一个goroutine 来进行清理即可
+	// 默认是 log
 	golog.SetDir("log")
 	
-	golog.InitLogger("test.log", 0, true， 7)
-	
+	golog.InitLogger("test.log", 0, true)
+	// 只要需要分隔文件 要清
+	golog.Clean()
 	golog.Infof("adf%s", "cander") 
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - adfcander
 }
@@ -160,7 +162,7 @@ func main() {
 	defer golog.Sync()
 	// 设置清除7小时以前的日志
 	golog.DefaultUnit = golog.Hour  // 设置单为小时
-	golog.InitLogger("log/test.log", 0, true, 7)
+	golog.InitLogger("test.log", 0, true)
 	golog.Infof("adf%s", "cander")
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:13 - adfcander
 }
@@ -191,9 +193,9 @@ import (
 )
 
 func main() {
-	logger1 := golog.NewLog("log/test1.log", 0, false) // 这是操作log/test1.log的实例， 用法与golog的方法使用一致
+	logger1 := golog.NewLog("test1.log", 0, false) // 这是操作log/test1.log的实例， 用法与golog的方法使用一致
 	defer logger1.Sync()
-	logger2 := golog.NewLog("log/test2.log", 0, false) // 这是操作log/test2.log的实例， 用法与golog的方法使用一致
+	logger2 := golog.NewLog("test2.log", 0, false) // 这是操作log/test2.log的实例， 用法与golog的方法使用一致
 	defer logger2.Sync()
 	logger1.Info("foo")
 	logger2.Info("foo")
