@@ -130,6 +130,8 @@ import (
 
 func main() {
 	defer golog.Sync()
+	// 如果设置了 过期清除日志 需要加上文件名进行精准删除，没有文件名则无效  否则不用加
+	golog.Clean("test.log")
 	// 第一个参数是设置日志文件名 ， 
 	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
 	//  第三个事是否每天切割， 如果 按照大小切割， 那么就不会按天切割
@@ -141,7 +143,7 @@ func main() {
 	
 	golog.InitLogger("test.log", 0, true)
 	// 只要需要分隔文件 要清
-	golog.Clean()
+	
 	golog.Infof("adf%s", "cander") 
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - adfcander
 }

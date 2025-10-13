@@ -60,7 +60,6 @@ func SetLogPriority(logPriority bool) {
 func InitLogger(name string, size int64, everyday bool) {
 
 	_name = filepath.Base(name)
-	_names = append(_names, _name)
 	_fileSize = size
 	_everyDay = everyday
 
@@ -74,14 +73,15 @@ func InitLogger(name string, size int64, everyday bool) {
 
 }
 
-var _names = make([]string, 0)
-
 // 清理日志， 请在写入文件初始化后调用即可， 已经是异步处理
-func Clean() {
+func Clean(names ...string) {
+	if len(names) == 0 {
+		return
+	}
 	once.Do(func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		go clean(ctx, _dir, _expireClean, _names...)
+		go clean(ctx, _dir, _expireClean, names...)
 	})
 }
 
@@ -273,8 +273,9 @@ func s(level level, msg string, deep ...int) {
 		ml.Msg = logMsg.String()
 		// ml.printLine()
 		// fmt.Print(ml.Msg)
-		// fmt.Println(111)
+
 		// ml.control()
+
 		if _logPriority {
 			t.cache <- ml
 		} else {

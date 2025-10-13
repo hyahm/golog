@@ -1,17 +1,17 @@
 package golog
 
 import (
-	"fmt"
 	"testing"
+	"time"
 )
 
 func TestInitLogger(t *testing.T) {
-	defer Sync()
-
+	Clean("test.log")
 	SetDir("log")
-
+	SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
-	// InitLogger("aaa/test.log", 10, false, 7)
+	l := NewLog("test.log", 10, false)
+	defer l.Sync()
 	// NewLog("test.log", 10, false, 7)
 	// ShowBasePath = true
 
@@ -21,10 +21,10 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	Info("消息")
-	Warn("警告")
-	Error("失败")
-	fmt.Println(111)
+	l.Info("消息")
+	l.Warn("警告")
+	l.Error("失败")
+	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	// a := NewLog("log/a.log", 1024, true, 10)
 	// for range 100 {

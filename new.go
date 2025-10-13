@@ -99,11 +99,11 @@ func (l *Log) SetLogPriority(logPriority bool) {
 // name : filename, size: mb,
 func NewLog(name string, size int64, everyday bool) *Log {
 	name = filepath.Base(name)
-	_names = append(_names, name)
 	l := &Log{
 		Label:    make(map[string]string),
 		Mu:       &sync.RWMutex{},
 		Size:     size,
+		Dir:      _dir,
 		EveryDay: everyday,
 		Name:     name,
 		level:    INFO,

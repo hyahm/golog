@@ -45,6 +45,10 @@ func (t *task) write() {
 
 		case c, ok := <-t.cache:
 			if !ok {
+				if len(cl.Msg) > 0 {
+					t.control(cl)
+					cl.Msg = ""
+				}
 				t.exit <- struct{}{}
 				return
 			}
@@ -65,6 +69,7 @@ func (t *task) write() {
 				continue
 			}
 			cl.Msg += c.Msg
+
 			t.control(cl)
 			cl.Msg = ""
 
@@ -77,7 +82,7 @@ var _expireClean time.Duration = time.Hour * 24 * 365
 
 // 设置清理时间 默认365天
 func SetExpireDuration(d time.Duration) {
-
+	_expireClean = d
 }
 
 func Sync() {
@@ -87,7 +92,6 @@ func Sync() {
 	t.wg.Wait()
 	close(t.cache)
 	<-t.exit
-	// time.Sleep(time.Millisecond * 200)
 
 }
 
@@ -97,6 +101,5 @@ func (l *Log) Sync() {
 	l.task.wg.Wait()
 	close(l.task.cache)
 	<-l.task.exit
-	// time.Sleep(time.Millisecond * 200)
 
 }

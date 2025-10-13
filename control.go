@@ -102,7 +102,6 @@ func (cl msgLog) control() {
 func (task *task) control(cl msgLog) {
 	// format = printFileline() + format // printfileline()打印出错误的文件和行数
 	// 判断是输出控制台 还是写入文件
-
 	if cl.out {
 		// 如果是输出到控制台，直接执行就好了
 		cl.printLine()
