@@ -303,6 +303,19 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	if level == WARN && WarnHandler != nil {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
+
+	if _develop {
+		if ml.out {
+			// 控制台才添加颜色， 否则不添加颜色
+			ml.Color = GetColor(ml.Level)
+		}
+
+		logMsg, _ := ml.formatText()
+		ml.Msg = logMsg.String()
+		l.task.cache <- ml
+		return
+	}
+
 	l.task.wg.Go(func() {
 		if ml.out {
 			// 控制台才添加颜色， 否则不添加颜色

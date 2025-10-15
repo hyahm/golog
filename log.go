@@ -16,6 +16,7 @@ var (
 	_everyDay bool           // 每天一个来切割文件 （这个比上面个优先级高）
 	_dir      string = "log" // 文件目录
 	_name     string
+	_develop  bool
 )
 
 var once = sync.Once{}
@@ -49,6 +50,11 @@ func SetDir(dir string) {
 		fmt.Println(err)
 		_dir = "."
 	}
+}
+
+// 开发模式， 日志会顺序打印， 并且不会丢弃
+func SetDevelop() {
+	_develop = true
 }
 
 // 默认false  也就是性能优先
@@ -262,6 +268,17 @@ func s(level level, msg string, deep ...int) {
 	}
 	if level == WARN && WarnHandler != nil {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	}
+	if _develop {
+		if ml.out {
+			// 控制台才添加颜色， 否则不添加颜色
+			ml.Color = GetColor(ml.Level)
+		}
+
+		logMsg, _ := ml.formatText()
+		ml.Msg = logMsg.String()
+		t.cache <- ml
+		return
 	}
 	t.wg.Go(func() {
 		if ml.out {
