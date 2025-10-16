@@ -1,6 +1,7 @@
 package golog
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -44,6 +45,7 @@ func (t *task) write() {
 			}
 
 		case c, ok := <-t.cache:
+			// fmt.Println("--------------", c.Msg)
 			if !ok {
 				if len(cl.Msg) > 0 {
 					t.control(cl)
@@ -52,11 +54,12 @@ func (t *task) write() {
 				t.exit <- struct{}{}
 				return
 			}
-			if len(c.Color) > 0 {
+			if c.out {
 				// 有带颜色日志要实时打印
 				t.control(c)
 				continue
 			}
+
 			cl.dir = c.dir
 			cl.out = c.out
 			cl.now = time.Now()
@@ -64,12 +67,12 @@ func (t *task) write() {
 			cl.everyDay = c.everyDay
 			cl.Ctime = c.Ctime
 			cl.size = c.size
+			cl.Color = c.Color
+			cl.Msg += c.Msg
 			if len(cl.Msg) < BLOCKSIZE {
-				cl.Msg += c.Msg
 				continue
 			}
-			cl.Msg += c.Msg
-
+			fmt.Println(cl.Msg)
 			t.control(cl)
 			cl.Msg = ""
 

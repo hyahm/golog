@@ -15,7 +15,11 @@ const (
 )
 
 // 日志级别
-var Level level = INFO
+var _level level = INFO
+
+func SetLevel(l level) {
+	_level = l
+}
 
 func (l level) String() string {
 	switch l {

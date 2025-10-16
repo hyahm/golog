@@ -8,10 +8,12 @@ import (
 func TestInitLogger(t *testing.T) {
 	Clean("test.log")
 	SetDir("log")
+
 	SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
-	l := NewLog("test.log", 10, false)
+	l := NewLog("", 10, false)
 	defer l.Sync()
+	SetDevelop()
 	// NewLog("test.log", 10, false, 7)
 	// ShowBasePath = true
 
@@ -22,7 +24,7 @@ func TestInitLogger(t *testing.T) {
 	// 	fmt.Println(msg)
 	// }
 	l.Info("消息")
-	l.Warn("警告")
+	l.Info("消息")
 	l.Error("失败")
 	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)

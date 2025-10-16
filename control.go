@@ -197,11 +197,12 @@ func (lm *msgLog) writeToFile() {
 }
 
 func (lm *msgLog) printLine() {
-	if len(lm.Color) > 0 {
-		color.New(lm.Color...).Print(lm.Msg)
-		return
-	}
-	color.New(lm.Color...).Print(lm.Msg)
+
+	// if len(lm.Color) > 0 {
+	color.New(color.BgBlue).Print(lm.Msg)
+	// 	return
+	// }
+	// // color.New(lm.Color...).Print(lm.Msg)
 	// fmt.Print(lm.Msg)
 }
 
@@ -220,7 +221,6 @@ func (lm *msgLog) formatText() (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	err := tml.Execute(buf, lm)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	return buf, nil

@@ -106,7 +106,7 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		Dir:      _dir,
 		EveryDay: everyday,
 		Name:     name,
-		level:    INFO,
+		level:    _level,
 		task: &task{
 			cache: make(chan msgLog, 1000),
 			exit:  make(chan struct{}),
@@ -309,8 +309,10 @@ func (l *Log) s(level level, msg string, deep ...int) {
 			// 控制台才添加颜色， 否则不添加颜色
 			ml.Color = GetColor(ml.Level)
 		}
-
-		logMsg, _ := ml.formatText()
+		logMsg, err := ml.formatText()
+		if err != nil {
+			fmt.Println(err)
+		}
 		ml.Msg = logMsg.String()
 		l.task.cache <- ml
 		return
@@ -319,6 +321,7 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	l.task.wg.Go(func() {
 		if ml.out {
 			// 控制台才添加颜色， 否则不添加颜色
+
 			ml.Color = GetColor(ml.Level)
 		}
 
