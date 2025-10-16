@@ -1,7 +1,6 @@
 package golog
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -38,7 +37,7 @@ func (t *task) write() {
 	for {
 		select {
 		case <-ticker.C:
-			if len(cl.Msg) > 0 && time.Since(cl.now).Milliseconds() > 100 {
+			if len(cl.Msg) > 0 {
 				t.control(cl)
 				cl.Msg = ""
 
@@ -59,20 +58,22 @@ func (t *task) write() {
 				t.control(c)
 				continue
 			}
-
+			if c.Ctime.Day() != time.Now().Day() {
+				t.control(cl)
+				cl.Msg = ""
+			}
 			cl.dir = c.dir
 			cl.out = c.out
-			cl.now = time.Now()
 			cl.name = c.name
 			cl.everyDay = c.everyDay
 			cl.Ctime = c.Ctime
 			cl.size = c.size
 			cl.Color = c.Color
 			cl.Msg += c.Msg
+
 			if len(cl.Msg) < BLOCKSIZE {
 				continue
 			}
-			fmt.Println(cl.Msg)
 			t.control(cl)
 			cl.Msg = ""
 

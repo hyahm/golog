@@ -150,7 +150,7 @@ func (task *task) control(cl msgLog) {
 	if cl.size == 0 && cl.everyDay {
 
 		// 不存在就移动创建
-		if cl.Ctime.Format("20060102") != time.Now().Format("20060102") {
+		if cl.Ctime.Day() != time.Now().Day() {
 			oldfile := filepath.Join(cl.dir, cl.Ctime.Format("2006-01-02")+"_"+cl.name)
 			// 如果每天备份的话， 文件名需要更新
 			// 重命名
@@ -197,12 +197,28 @@ func (lm *msgLog) writeToFile() {
 }
 
 func (lm *msgLog) printLine() {
+	// if !isatty.IsTerminal(os.Stdout.Fd()) {
+	// 	panic("not in terminal")
+	// }
 
-	// if len(lm.Color) > 0 {
-	color.New(color.BgBlue).Print(lm.Msg)
+	// 1. 获取控制台输出句柄
+	// h := syscall.Handle(os.Stdout.Fd())
+
+	// 2. 设置蓝底白字
+	// syscall.set
+	// syscall.SetConsoleTextAttribute(h, backBlue|foreWhite)
+
+	// 3. 直接写 string —— 零逃逸
+
+	// 4. 还原默认色（白字黑底）
+	// syscall.SetConsoleTextAttribute(h, foreWhite)
+	// ① 先避开接口
+	// buf := []byte(lm.Msg)
+	// // if len(lm.Color) > 0 {
+	// color.New(color.BgBlue).Fprint(colorable.NewColorable(os.Stdout), buf)
 	// 	return
 	// }
-	// // color.New(lm.Color...).Print(lm.Msg)
+	color.New(lm.Color...).Print(lm.Msg)
 	// fmt.Print(lm.Msg)
 }
 

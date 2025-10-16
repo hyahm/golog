@@ -21,8 +21,8 @@ type msgLog struct {
 	everyDay bool
 	format   string
 	Hostname string
-	now      time.Time
-	Label    map[string]string
+	// now      time.Time
+	Label map[string]string
 	// ErrorHandler func(time.Time, string, string, string, map[string]string)
 	// InfoHandler  func(time.Time, string, string, string, map[string]string)
 	// WarnHandler  func(time.Time, string, string, string, map[string]string)
