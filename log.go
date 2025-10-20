@@ -1,7 +1,6 @@
 package golog
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -74,16 +73,14 @@ func InitLogger(name string, size int64, everyday bool) {
 }
 
 // 清理日志， 请在写入文件初始化后调用即可， 已经是异步处理
-func Clean(names ...string) {
-	if len(names) == 0 {
-		return
-	}
-	once.Do(func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		go clean(ctx, _dir, _expireClean, names...)
-	})
-}
+// func Clean(names ...string) {
+// 	if len(names) == 0 {
+// 		return
+// 	}
+// 	once.Do(func() {
+// 		go clean(_dir, _expireClean, names...)
+// 	})
+// }
 
 func AddLabel(key, value string) {
 	labelLock.RLock()

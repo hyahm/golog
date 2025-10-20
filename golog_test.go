@@ -2,12 +2,14 @@ package golog
 
 import (
 	"testing"
+	"time"
 )
 
 func TestInitLogger(t *testing.T) {
 	defer Sync()
 	InitLogger("", 10, false)
-
+	SetExpireDuration(time.Second)
+	AddClean()
 	SetLevel(DEBUG)
 	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
@@ -24,6 +26,7 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
+
 	Infof("消息%s", "asdfasdf")
 	AddLabel("key1", "value1")
 	Info("消息")
@@ -42,5 +45,5 @@ func TestInitLogger(t *testing.T) {
 	// Level = DEBUG
 	// // test()
 	// a.Error("bar")
-
+	time.Sleep(time.Second * 100)
 }

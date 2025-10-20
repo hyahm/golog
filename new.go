@@ -38,17 +38,20 @@ type Log struct {
 }
 
 // 递归遍历文件夹
-func walkDir(dir string, expire time.Duration, name ...string) error {
-
-	return filepath.Walk(dir, func(fp string, info os.FileInfo, err error) error {
+func walkDir() error {
+	names := getNames()
+	name := make([]string, 0, len(names))
+	for k := range names {
+		name = append(name, k)
+	}
+	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() && containsSlice(info.Name(), name...) {
-
+		if !info.IsDir() && containsSlice(info.Name(), name) {
 			modTime := info.ModTime()
-			if time.Since(modTime) > expire {
+			if time.Since(modTime) > _expireClean {
 				os.Remove(fp)
 			}
 		}
@@ -56,39 +59,13 @@ func walkDir(dir string, expire time.Duration, name ...string) error {
 	})
 }
 
-func containsSlice(str string, ss ...string) bool {
+func containsSlice(str string, ss []string) bool {
 	for _, v := range ss {
 		if strings.Contains(str, v) {
 			return true
 		}
 	}
 	return false
-}
-
-func clean(ctx context.Context, dir string, expire time.Duration, name ...string) {
-	for {
-		select {
-
-		case <-time.After(expire):
-			if len(name) == 0 {
-				return
-			}
-			walkDir(dir, expire, name...)
-
-			// fs, err := os.ReadDir(l.Dir)
-			// if err != nil {
-			// 	continue
-			// }
-			// for _, f := range fs {
-			// 	if strings.Contains(f.Name(), l.Name) {
-			// 		os.Remove(filepath.Join(logPath, f.Name()))
-			// 	}
-			// }
-		case <-ctx.Done():
-			return
-		}
-
-	}
 }
 
 // 默认false  也就是性能优先

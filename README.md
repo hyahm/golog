@@ -159,7 +159,8 @@ import (
 func main() {
 	defer golog.Sync()
 	// 如果设置了 过期清除日志 需要加上文件名进行精准删除，没有文件名则无效  否则不用加
-	golog.Clean("test.log")
+	golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
+	golog.AddClean("test.log")   // 如果需要清除，必须要添加需要删除的文件， 全局的配置， 任何地方添加都会生效 方便多个日志实例
 	// 第一个参数是设置日志文件名 ， 
 	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
 	//  第三个事是否每天切割， 如果 按照大小切割， 那么就不会按天切割
