@@ -8,10 +8,38 @@ go version >= 1.25.0
  go get github.com/hyahm/golog@main
 ```
 
-### 日志格式化(text/template模板语法)
+### 日志自定义格式化
 > 通过 golog.Format 设置输出格式，默认的输出格式如下
 
-`{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}`
+```go
+ 
+ json 格式
+func JsonFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
+	labels := make([]string, 0, len(label))
+	if len(label) > 0 {
+		for k, v := range label {
+			labels = append(labels, fmt.Sprintf(`"%s": "%s"`, k, v))
+		}
+		return fmt.Sprintf(`{"createTime": "%s", %s, "level": "%s","hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", strings.Join(labels, ","), ctime.String(), level, hostname, line, msg)
+	}
+
+	return fmt.Sprintf(`{"createTime": "%s","level": "%s", "hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", ctime.String(), level, hostname, line, msg)
+}
+
+
+上面是默认的格式
+
+
+下面自定义格式， 因为没用到label 就不需要判断label
+
+	SetFormatFunc(func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
+		return fmt.Sprintf(`createTime -- %s --- hostname: %s, "line": "%s", "msg": "%s"}`+"\n", ctime.String(), hostname, line, msg)
+	})
+
+
+
+```
+
 
 ### 最简单的同步打印控制台
 ```go
@@ -69,7 +97,7 @@ func main() {
 	// 默认的日志级别是info， 所以debug级别不会打印出来,
 	golog.Debug("foo") // stdout: nothing
 	// 通过 golog.Level = golog.DEBUG 可以设置级别为DEBUG
-	golog.Level = golog.DEBUG //
+	golog.SetLevel(golog.DEBUG) //
 	golog.Debug("bar")        // stdout: 2022-03-04 10:21:00 - [DEBUG] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:14 - bar
 }
 ```
@@ -94,7 +122,7 @@ func main() {
 	// 虽然是可视化输出， 但是不需要增加\n换行
 	golog.Debug("foo") // stdout: nothing
 	// 通过 golog.Level = golog.DEBUG 可以设置级别为DEBUG
-	golog.Level = golog.DEBUG //
+	golog.SetLevel(golog.DEBUG)
 	
 	golog.Debug("bar")        // stdout: 2022-03-04 10:21:00 - [DEBUG] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:14 - bar
 	golog.ShowBasePath = true  // 显示基本文件，而不是完整路径

@@ -58,7 +58,6 @@ func (t *task) write() {
 				// 控制台才添加颜色， 否则不添加颜色
 				c.Color = GetColor(c.Level)
 			}
-
 			c.Msg = c.format(c.Ctime, c.Level.String(), c.Hostname, c.Line, c.Msg, c.Label)
 			if c.out {
 				// 有带颜色日志要实时打印

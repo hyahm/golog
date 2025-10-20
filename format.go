@@ -12,7 +12,7 @@ func SetFormatFunc(f func(ctime time.Time, level, hostname, line, msg string, la
 	_formatFunc = f
 }
 
-func defaultFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
+func JsonFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
 	labels := make([]string, 0, len(label))
 	if len(label) > 0 {
 		for k, v := range label {
@@ -22,4 +22,16 @@ func defaultFormat(ctime time.Time, level, hostname, line, msg string, label map
 	}
 
 	return fmt.Sprintf(`{"createTime": "%s","level": "%s", "hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", ctime.String(), level, hostname, line, msg)
+}
+
+func defaultFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
+	if len(label) > 0 {
+		labels := make([]string, 0, len(label))
+		for k, v := range label {
+			labels = append(labels, fmt.Sprintf(`"%s": "%s"`, k, v))
+		}
+		return fmt.Sprintf(`%s -- %s -- [%s] -- %s -- %s -- %s`+"\n", ctime.String(), strings.Join(labels, ","), level, hostname, line, msg)
+	}
+
+	return fmt.Sprintf(`%s -- [%s] -- %s -- %s -- %s`+"\n", ctime.String(), level, hostname, line, msg)
 }

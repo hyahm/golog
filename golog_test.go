@@ -1,17 +1,13 @@
 package golog
 
 import (
-	"fmt"
 	"testing"
-	"time"
 )
 
 func TestInitLogger(t *testing.T) {
 	defer Sync()
 	InitLogger("", 10, false)
-	SetFormatFunc(func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
-		return fmt.Sprintf(`createTime -- %s --- hostname: %s, "line": "%s", "msg": "%s"}`+"\n", ctime.String(), hostname, line, msg)
-	})
+
 	SetLevel(DEBUG)
 	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
@@ -29,6 +25,7 @@ func TestInitLogger(t *testing.T) {
 	// 	fmt.Println(msg)
 	// }
 	Infof("消息%s", "asdfasdf")
+	AddLabel("key1", "value1")
 	Info("消息")
 	Error("失败")
 	Error("失败")
