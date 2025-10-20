@@ -27,7 +27,7 @@ type Log struct {
 	EveryDay     bool
 	Name         string
 	Expire       int
-	Format       string
+	Format       func(ctime time.Time, hostname, line, msg string, label map[string]string) string
 	cancel       context.CancelFunc
 	level        level
 	task         *task
@@ -178,7 +178,7 @@ func (l *Log) Tracef(format string, msg ...interface{}) {
 func (l *Log) Debug(msg ...interface{}) {
 	// debug,
 	if l.level <= DEBUG {
-		l.s(DEBUG, arrToString(msg...)+"\n")
+		l.s(DEBUG, arrToString(msg...))
 	}
 }
 
@@ -203,7 +203,7 @@ func (l *Log) Debugf(format string, msg ...interface{}) {
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Info(msg ...interface{}) {
 	if l.level <= INFO {
-		l.s(INFO, arrToString(msg...)+"\n")
+		l.s(INFO, arrToString(msg...))
 	}
 }
 func (l *Log) Infof(format string, msg ...interface{}) {
@@ -217,7 +217,7 @@ func (l *Log) Infof(format string, msg ...interface{}) {
 func (l *Log) Warn(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if l.level <= WARN {
-		l.s(WARN, arrToString(msg...)+"\n")
+		l.s(WARN, arrToString(msg...))
 	}
 }
 
@@ -232,7 +232,7 @@ func (l *Log) Warnf(format string, msg ...interface{}) {
 func (l *Log) Error(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if l.level <= ERROR {
-		l.s(ERROR, arrToString(msg...)+"\n")
+		l.s(ERROR, arrToString(msg...))
 	}
 }
 
@@ -246,7 +246,7 @@ func (l *Log) Errorf(format string, msg ...interface{}) {
 func (l *Log) Fatal(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if l.level <= FATAL {
-		l.s(FATAL, arrToString(msg...)+"\n")
+		l.s(FATAL, arrToString(msg...))
 	}
 	os.Exit(1)
 }
@@ -261,7 +261,7 @@ func (l *Log) Fatalf(format string, msg ...interface{}) {
 func (l *Log) UpFunc(deep int, msg ...interface{}) {
 	// deep打印函数的深度， 相对于当前位置向外的深度
 	if l.level <= DEBUG {
-		l.s(DEBUG, arrToString(msg...)+"\n", deep)
+		l.s(DEBUG, arrToString(msg...), deep)
 	}
 }
 
@@ -284,7 +284,11 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	ml.Hostname = hostname
 	ml.name = l.Name
 	ml.size = l.Size
-	ml.format = Format
+	if _formatFunc == nil {
+		ml.format = defaultFormat
+	} else {
+		ml.format = _formatFunc
+	}
 	ml.everyDay = l.EveryDay
 	ml.Label = l.GetLabel()
 
@@ -304,39 +308,15 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
 
-	if _develop {
-		if ml.out {
-			// 控制台才添加颜色， 否则不添加颜色
-			ml.Color = GetColor(ml.Level)
-		}
-		logMsg, err := ml.formatText()
-		if err != nil {
-			fmt.Println(err)
-		}
-		ml.Msg = logMsg.String()
+	if l._logPriority {
 		l.task.cache <- ml
-		return
+	} else {
+		select {
+		case l.task.cache <- ml:
+		default:
+		}
 	}
 
-	l.task.wg.Go(func() {
-		if ml.out {
-			// 控制台才添加颜色， 否则不添加颜色
+	// ml.control()
 
-			ml.Color = GetColor(ml.Level)
-		}
-
-		logMsg, _ := ml.formatText()
-		ml.Msg = logMsg.String()
-		if l._logPriority {
-			l.task.cache <- ml
-		} else {
-			select {
-			case l.task.cache <- ml:
-			default:
-			}
-		}
-
-		// ml.control()
-
-	})
 }

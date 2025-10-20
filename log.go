@@ -16,7 +16,6 @@ var (
 	_everyDay bool           // 每天一个来切割文件 （这个比上面个优先级高）
 	_dir      string = "log" // 文件目录
 	_name     string
-	_develop  bool
 )
 
 var once = sync.Once{}
@@ -25,9 +24,7 @@ var ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[str
 var InfoHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 var WarnHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
 
-// 文件名
-
-var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
+// var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
 var label map[string]string
 var labelLock sync.RWMutex
 var _logPriority bool
@@ -52,11 +49,6 @@ func SetDir(dir string) {
 		fmt.Println(err)
 		_dir = "."
 	}
-}
-
-// 开发模式， 日志会顺序打印， 并且不会丢弃
-func SetDevelop() {
-	_develop = true
 }
 
 // 默认false  也就是性能优先
@@ -172,7 +164,7 @@ func UpFuncf(deep int, format string, args ...interface{}) {
 func Trace(msg ...interface{}) {
 	// Access,
 	if _level <= TRACE {
-		s(TRACE, fmt.Sprint(msg...)+"\n")
+		s(TRACE, fmt.Sprint(msg...))
 	}
 }
 
@@ -180,14 +172,14 @@ func Trace(msg ...interface{}) {
 func Debug(msg ...interface{}) {
 	// debug,
 	if _level <= DEBUG {
-		s(DEBUG, fmt.Sprint(msg...)+"\n")
+		s(DEBUG, fmt.Sprint(msg...))
 	}
 }
 
 // open file，  所有日志默认前面加了时间，
 func Info(msg ...interface{}) {
 	if _level <= INFO {
-		s(INFO, fmt.Sprint(msg...)+"\n")
+		s(INFO, fmt.Sprint(msg...))
 	}
 }
 
@@ -195,7 +187,7 @@ func Info(msg ...interface{}) {
 func Warn(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if _level <= WARN {
-		s(WARN, arrToString(msg...)+"\n")
+		s(WARN, arrToString(msg...))
 	}
 }
 
@@ -203,14 +195,14 @@ func Warn(msg ...interface{}) {
 func Error(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if _level <= ERROR {
-		s(ERROR, arrToString(msg...)+"\n")
+		s(ERROR, arrToString(msg...))
 	}
 }
 
 func Fatal(msg ...interface{}) {
 	// error日志，添加了错误函数，
 	if _level <= FATAL {
-		s(FATAL, arrToString(msg...)+"\n")
+		s(FATAL, arrToString(msg...))
 	}
 	os.Exit(1)
 }
@@ -218,7 +210,7 @@ func Fatal(msg ...interface{}) {
 func UpFunc(deep int, msg ...interface{}) {
 	// deep打印函数的深度， 相对于当前位置向外的深度
 	if _level <= DEBUG {
-		s(DEBUG, arrToString(msg...)+"\n", deep)
+		s(DEBUG, arrToString(msg...), deep)
 	}
 }
 
@@ -246,12 +238,17 @@ func s(level level, msg string, deep ...int) {
 	// ml := GetPool()
 	ml := msgLog{}
 	ml.name = _name
-	ml.out = _dir == "." || _dir == ""
+	ml.out = _name == "." || _name == ""
 	ml.dir = _dir
 	ml.size = _fileSize
 	ml.everyDay = _everyDay
 	ml.Hostname = hostname
-	ml.format = Format
+	if _formatFunc == nil {
+		ml.format = defaultFormat
+	} else {
+		ml.format = _formatFunc
+	}
+
 	ml.Level = level
 	ml.Msg = msg
 	ml.Ctime = time.Now()
@@ -271,44 +268,30 @@ func s(level level, msg string, deep ...int) {
 	if level == WARN && WarnHandler != nil {
 		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
 	}
-	if _develop {
-		if ml.out {
-			// 控制台才添加颜色， 否则不添加颜色
-			ml.Color = GetColor(ml.Level)
-		}
+	// if ml.out {
+	// 	// 控制台才添加颜色， 否则不添加颜色
+	// 	ml.Color = GetColor(ml.Level)
+	// }
 
-		logMsg, _ := ml.formatText()
-		ml.Msg = logMsg.String()
+	// logMsg, _ := ml.formatText()
+	// ml.Msg = logMsg.String()
+	// // ml.printLine()
+	// // fmt.Print(ml.Msg)
+
+	// // ml.control()
+
+	if _logPriority {
 		t.cache <- ml
-		return
+	} else {
+		select {
+		case t.cache <- ml:
+		default:
+		}
 	}
-	t.wg.Go(func() {
-		if ml.out {
-			// 控制台才添加颜色， 否则不添加颜色
-			ml.Color = GetColor(ml.Level)
-		}
 
-		logMsg, _ := ml.formatText()
-		ml.Msg = logMsg.String()
-		// ml.printLine()
-		// fmt.Print(ml.Msg)
-
-		// ml.control()
-
-		if _logPriority {
-			t.cache <- ml
-		} else {
-			select {
-			case t.cache <- ml:
-			default:
-			}
-		}
-
-		// ml = nil
-		// ml.reset()
-		// PutPool(ml)
-
-	})
+	// ml = nil
+	// ml.reset()
+	// PutPool(ml)
 
 	// if ml.BufCache.Len() > 1<<20 {
 	// 	fmt.Println("write bytes")

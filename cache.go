@@ -19,7 +19,7 @@ type msgLog struct {
 	name     string
 	size     int64 // 默认单位M
 	everyDay bool
-	format   string
+	format   func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string
 	Hostname string
 	// now      time.Time
 	Label map[string]string

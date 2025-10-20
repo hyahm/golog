@@ -44,6 +44,7 @@ func (t *task) write() {
 			}
 
 		case c, ok := <-t.cache:
+
 			// fmt.Println("--------------", c.Msg)
 			if !ok {
 				if len(cl.Msg) > 0 {
@@ -54,11 +55,18 @@ func (t *task) write() {
 				return
 			}
 			if c.out {
+				// 控制台才添加颜色， 否则不添加颜色
+				c.Color = GetColor(c.Level)
+			}
+
+			c.Msg = c.format(c.Ctime, c.Level.String(), c.Hostname, c.Line, c.Msg, c.Label)
+			if c.out {
 				// 有带颜色日志要实时打印
 				t.control(c)
 				continue
 			}
-			if c.Ctime.Day() != time.Now().Day() {
+
+			if c.Ctime.Day() != logdate.Day() {
 				t.control(cl)
 				cl.Msg = ""
 			}

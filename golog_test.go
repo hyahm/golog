@@ -1,21 +1,24 @@
 package golog
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
 
 func TestInitLogger(t *testing.T) {
-	Clean("test.log")
-	SetDir("log")
-
-	SetExpireDuration(time.Second * 10)
+	defer Sync()
+	InitLogger("", 10, false)
+	SetFormatFunc(func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
+		return fmt.Sprintf(`createTime -- %s --- hostname: %s, "line": "%s", "msg": "%s"}`+"\n", ctime.String(), hostname, line, msg)
+	})
+	SetLevel(DEBUG)
+	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
-	l := NewLog("cl.log", 0, true)
-	l2 := NewLog("c2.log", 0, true)
-	defer l.Sync()
-	defer l2.Sync()
-	SetDevelop()
+	// l := NewLog("", 0, true)
+	// l2 := NewLog("", 0, true)
+	// defer l.Sync()
+	// defer l2.Sync()
 	// NewLog("test.log", 10, false, 7)
 	// ShowBasePath = true
 
@@ -25,12 +28,13 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	l.Info("消息")
-	l2.Info("消息")
-	l.Error("失败")
-	l2.Error("失败")
-	l.Error("失败")
-	l.Error("失败")
+	Infof("消息%s", "asdfasdf")
+	Info("消息")
+	Error("失败")
+	Error("失败")
+	Error("失败")
+	Error("失败")
+	UpFunc(1, "111")
 	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	// a := NewLog("log/a.log", 1024, true, 10)

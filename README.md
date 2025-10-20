@@ -163,7 +163,6 @@ import (
 func main() {
 	defer golog.Sync()
 	// 设置清除7小时以前的日志
-	golog.DefaultUnit = golog.Hour  // 设置单为小时
 	golog.InitLogger("test.log", 0, true)
 	golog.Infof("adf%s", "cander")
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:13 - adfcander
