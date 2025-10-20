@@ -21,7 +21,7 @@ func AddClean(names ...string) {
 		_names[v] = struct{}{}
 	}
 	once.Do(func() {
-		clean()
+		go clean()
 	})
 }
 

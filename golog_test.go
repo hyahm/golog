@@ -7,7 +7,7 @@ import (
 
 func TestInitLogger(t *testing.T) {
 	defer Sync()
-	InitLogger("", 10, false)
+	InitLogger("aa.log", 10, false)
 	SetExpireDuration(time.Second)
 	AddClean()
 	SetLevel(DEBUG)
@@ -45,5 +45,5 @@ func TestInitLogger(t *testing.T) {
 	// Level = DEBUG
 	// // test()
 	// a.Error("bar")
-	time.Sleep(time.Second * 100)
+	// time.Sleep(time.Second * 100)
 }
