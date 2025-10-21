@@ -159,15 +159,7 @@ import (
 func main() {
 	defer golog.Sync()
 	// 如果设置了 过期清除日志 需要加上文件名进行精准删除，没有文件名则无效  否则不用加
-	golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
-	golog.AddClean("test.log")   // 如果需要清除，必须要添加需要删除的文件， 全局的配置， 任何地方添加都会生效 方便多个日志实例
-	// 第一个参数是设置日志文件名 ， 
-	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
-	//  第三个事是否每天切割， 如果 按照大小切割， 那么就不会按天切割
-	// 第四个是删除多少天以前的日志，当前设置的是7天， 根据设置的name 来匹配， 不写或者0表示不删除
-	// 没错，写入文件就是只需要增加这一行即可
-	// 为了性能， 所有实例的日志统一一个目录下面， 这样的话只需要一个goroutine 来进行清理即可
-	// 默认是 log
+	// 所有实例都会在这个目录下面， 方便下面介绍的清理日志
 	golog.SetDir("log")
 	
 	golog.InitLogger("test.log", 0, true)
@@ -191,8 +183,18 @@ import (
 
 func main() {
 	defer golog.Sync()
+    // golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
+	
+	// 第一个参数是设置日志文件名 ， 
+	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
+	//  第三个事是否每天切割， 如果 按照大小切割， 那么就不会按天切割
+	// 第四个是删除多少天以前的日志，当前设置的是7天， 根据设置的name 来匹配， 不写或者0表示不删除
+	// 没错，写入文件就是只需要增加这一行即可
+	// 为了性能， 所有实例的日志统一一个目录下面， 这样的话只需要一个goroutine 来进行清理即可
+	// 默认是 log
 	// 设置清除7小时以前的日志
 	golog.InitLogger("test.log", 0, true)
+    golog.AddClean("test.log")   // 如果需要清除，必须要添加需要删除的文件， 全局的配置， 任何地方添加都会生效 方便多个日志实例
 	golog.Infof("adf%s", "cander")
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:13 - adfcander
 }
@@ -294,3 +296,4 @@ func main() {
 
 
 ```
+
