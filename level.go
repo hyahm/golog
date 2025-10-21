@@ -5,7 +5,7 @@ type LogLevel int
 type level LogLevel
 
 const (
-	ALL level = iota * 10
+	ALL level = iota
 	TRACE
 	DEBUG
 	INFO
@@ -25,17 +25,17 @@ func (l level) String() string {
 	switch l {
 	case 0:
 		return "ALL"
-	case 10:
+	case 1:
 		return "TRACE"
-	case 20:
+	case 2:
 		return "DEBUG"
-	case 30:
+	case 3:
 		return "INFO"
-	case 40:
+	case 4:
 		return "WARN"
-	case 50:
+	case 5:
 		return "ERROR"
-	case 60:
+	case 6:
 		return "FATAL"
 	default:
 		return "INFO"

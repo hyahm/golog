@@ -18,10 +18,10 @@ func JsonFormat(ctime time.Time, level, hostname, line, msg string, label map[st
 		for k, v := range label {
 			labels = append(labels, fmt.Sprintf(`"%s": "%s"`, k, v))
 		}
-		return fmt.Sprintf(`{"createTime": "%s", %s, "level": "%s","hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", strings.Join(labels, ","), ctime.String(), level, hostname, line, msg)
+		return fmt.Sprintf(`{"createTime": "%s", %s, "level": "%s","line": "%s", "msg": "%s"}`+"\n", strings.Join(labels, ","), ctime.String(), level, line, msg)
 	}
 
-	return fmt.Sprintf(`{"createTime": "%s","level": "%s", "hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", ctime.String(), level, hostname, line, msg)
+	return fmt.Sprintf(`{"createTime": "%s","level": "%s",  "line": "%s", "msg": "%s"}`+"\n", ctime.String(), level, line, msg)
 }
 
 func defaultFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
@@ -30,8 +30,8 @@ func defaultFormat(ctime time.Time, level, hostname, line, msg string, label map
 		for k, v := range label {
 			labels = append(labels, fmt.Sprintf(`"%s": "%s"`, k, v))
 		}
-		return fmt.Sprintf(`%s -- %s -- [%s] -- %s -- %s -- %s`+"\n", ctime.String(), strings.Join(labels, ","), level, hostname, line, msg)
+		return fmt.Sprintf(`%s -- %s -- [%s] -- %s -- %s`+"\n", ctime.String()[:23], strings.Join(labels, ","), level, line, msg)
 	}
 
-	return fmt.Sprintf(`%s -- [%s] -- %s -- %s -- %s`+"\n", ctime.String(), level, hostname, line, msg)
+	return fmt.Sprintf(`%s -- [%s] -- %s -- %s`+"\n", ctime.String()[:23], level, line, msg)
 }
