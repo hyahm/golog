@@ -1,11 +1,10 @@
 package golog
 
 // type level int
-type LogLevel int
-type level LogLevel
+type Level int
 
 const (
-	ALL level = iota
+	ALL Level = iota
 	TRACE
 	DEBUG
 	INFO
@@ -15,13 +14,13 @@ const (
 )
 
 // 日志级别
-var _level level = INFO
+var _level Level = INFO
 
-func SetLevel(l level) {
+func SetLevel(l Level) {
 	_level = l
 }
 
-func (l level) String() string {
+func (l Level) String() string {
 	switch l {
 	case 0:
 		return "ALL"
@@ -42,6 +41,6 @@ func (l level) String() string {
 	}
 }
 
-func (l level) Int() int {
+func (l Level) Int() int {
 	return int(l)
 }

@@ -29,7 +29,7 @@ type Log struct {
 	Expire       int
 	Format       func(ctime time.Time, hostname, line, msg string, label map[string]string) string
 	cancel       context.CancelFunc
-	level        level
+	level        Level
 	task         *task
 	_logPriority bool
 	ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
@@ -159,14 +159,14 @@ func (l *Log) Debug(msg ...interface{}) {
 	}
 }
 
-func (l *Log) SetLevel(lv LogLevel) {
+func (l *Log) SetLevel(lv Level) {
 	// Access,
-	l.level = level(lv)
+	l.level = lv
 }
 
-func (l *Log) Level() LogLevel {
+func (l *Log) Level() Level {
 	// Access,
-	return LogLevel(l.level)
+	return l.level
 }
 
 // open file，  所有日志默认前面加了时间，
@@ -242,7 +242,7 @@ func (l *Log) UpFunc(deep int, msg ...interface{}) {
 	}
 }
 
-func (l *Log) s(level level, msg string, deep ...int) {
+func (l *Log) s(level Level, msg string, deep ...int) {
 	if len(deep) > 0 && deep[0] > 0 {
 		if ShowBasePath {
 			msg = fmt.Sprintf("caller from %s -- %v", printBaseFileline(deep[0]), msg)
@@ -258,7 +258,6 @@ func (l *Log) s(level level, msg string, deep ...int) {
 	ml.out = l.Name == "." || l.Name == ""
 	ml.dir = l.Dir
 	ml.Ctime = time.Now()
-	ml.Hostname = hostname
 	ml.name = l.Name
 	ml.size = l.Size
 	if _formatFunc == nil {
@@ -275,14 +274,8 @@ func (l *Log) s(level level, msg string, deep ...int) {
 		ml.Line = printFileline(0)
 	}
 
-	if level == ERROR && ErrorHandler != nil {
-		go ErrorHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
-	}
-	if level == INFO && InfoHandler != nil {
-		go InfoHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
-	}
-	if level == WARN && WarnHandler != nil {
-		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	if LogHandler != nil {
+		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg, ml.Label)
 	}
 
 	if l._logPriority {

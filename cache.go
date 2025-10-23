@@ -9,7 +9,7 @@ import (
 type msgLog struct {
 	// Prev    string    // 深度对于的路径
 	Msg   string // 日志信息
-	Level level  // 日志级别
+	Level Level  // 日志级别
 	Ctime time.Time
 	// deep     int               // 向外的深度，  Upfunc 才会用到
 	Color    []color.Attribute // 颜色
@@ -19,8 +19,7 @@ type msgLog struct {
 	name     string
 	size     int64 // 默认单位M
 	everyDay bool
-	format   func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string
-	Hostname string
+	format   func(level Level, ctime time.Time, line, msg string, label map[string]string) string
 	// now      time.Time
 	Label map[string]string
 	// ErrorHandler func(time.Time, string, string, string, map[string]string)

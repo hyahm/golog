@@ -19,9 +19,7 @@ var (
 
 var once = sync.Once{}
 
-var ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
-var InfoHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
-var WarnHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
+var LogHandler func(level Level, ctime time.Time, line, msg string, label map[string]string)
 
 // var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
 var label map[string]string
@@ -219,7 +217,7 @@ func arrToString(msg ...interface{}) string {
 	return strings.Join(ll, " ")
 }
 
-func s(level level, msg string, deep ...int) {
+func s(level Level, msg string, deep ...int) {
 
 	if len(deep) > 0 && deep[0] > 0 {
 		if ShowBasePath {
@@ -239,7 +237,6 @@ func s(level level, msg string, deep ...int) {
 	ml.dir = _dir
 	ml.size = _fileSize
 	ml.everyDay = _everyDay
-	ml.Hostname = hostname
 	if _formatFunc == nil {
 		ml.format = defaultFormat
 	} else {
@@ -256,14 +253,8 @@ func s(level level, msg string, deep ...int) {
 		ml.Line = printFileline(0)
 	}
 
-	if level == ERROR && ErrorHandler != nil {
-		go ErrorHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
-	}
-	if level == INFO && InfoHandler != nil {
-		go InfoHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
-	}
-	if level == WARN && WarnHandler != nil {
-		go WarnHandler(ml.Ctime, ml.Hostname, ml.Line, ml.Msg, ml.Label)
+	if LogHandler != nil {
+		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg, ml.Label)
 	}
 	// if ml.out {
 	// 	// 控制台才添加颜色， 否则不添加颜色

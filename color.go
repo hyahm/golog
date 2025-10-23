@@ -9,7 +9,7 @@ import (
 var logColor *levelColors
 
 type levelColors struct {
-	attrs map[level][]color.Attribute
+	attrs map[Level][]color.Attribute
 	mu    *sync.RWMutex
 }
 
@@ -17,7 +17,7 @@ type levelColors struct {
 func init() {
 	logColor = &levelColors{
 		mu:    &sync.RWMutex{},
-		attrs: make(map[level][]color.Attribute),
+		attrs: make(map[Level][]color.Attribute),
 	}
 	SetColor(ERROR, []color.Attribute{color.FgRed})
 	SetColor(WARN, []color.Attribute{color.FgYellow})
@@ -25,13 +25,13 @@ func init() {
 }
 
 // 设置某级别的颜色
-func SetColor(lv level, attrs []color.Attribute) {
+func SetColor(lv Level, attrs []color.Attribute) {
 	logColor.mu.Lock()
 	logColor.attrs[lv] = attrs
 	logColor.mu.Unlock()
 }
 
-func GetColor(lv level) []color.Attribute {
+func GetColor(lv Level) []color.Attribute {
 	logColor.mu.RLock()
 	defer logColor.mu.RUnlock()
 	if attrs, ok := logColor.attrs[lv]; ok {
@@ -40,7 +40,7 @@ func GetColor(lv level) []color.Attribute {
 	return nil
 }
 
-func CleanColor(lv level, attrs []color.Attribute) {
+func CleanColor(lv Level, attrs []color.Attribute) {
 	logColor.mu.Lock()
 	delete(logColor.attrs, lv)
 	logColor.mu.Unlock()
