@@ -14,7 +14,7 @@ func getNames() map[string]struct{} {
 	return _names
 }
 
-func AddClean(names ...string) {
+func addClean(names ...string) {
 	mu.Lock()
 	defer mu.Unlock()
 	for _, v := range names {

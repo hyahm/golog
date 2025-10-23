@@ -61,7 +61,7 @@ func InitLogger(name string, size int64, everyday bool) {
 	_name = filepath.Base(name)
 	_fileSize = size
 	_everyDay = everyday
-
+	addClean(_name)
 	// once.Do(func() {
 	// 	var ctx context.Context
 	// 	if _dir != "." && name != "" && _expire > 0 && (size > 0 || everyday) {

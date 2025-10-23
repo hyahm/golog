@@ -8,7 +8,6 @@ func TestInitLogger(t *testing.T) {
 	defer Sync()
 	// InitLogger("aa.log", 10, false)
 	// SetExpireDuration(time.Second)
-	// AddClean()
 	SetLevel(DEBUG)
 	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)

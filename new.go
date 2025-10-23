@@ -91,7 +91,7 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		},
 	}
 	go l.task.write()
-
+	addClean(_name)
 	return l
 }
 
