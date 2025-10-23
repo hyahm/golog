@@ -15,26 +15,27 @@ import (
 var ShowBasePath bool
 
 type Log struct {
-	Create       time.Time
-	Label        map[string]string
-	Deep         int
-	Color        []color.Attribute
-	Mu           *sync.RWMutex
-	Line         string
-	Out          bool
-	Dir          string
-	Size         int64
-	EveryDay     bool
-	Name         string
-	Expire       int
-	Format       func(ctime time.Time, hostname, line, msg string, label map[string]string) string
-	cancel       context.CancelFunc
-	level        Level
-	task         *task
-	_logPriority bool
-	ErrorHandler func(ctime time.Time, hostname, line, msg string, label map[string]string)
-	InfoHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
-	WarnHandler  func(ctime time.Time, hostname, line, msg string, label map[string]string)
+	Create time.Time
+	// Label             map[string]string
+	Deep              int
+	Color             []color.Attribute
+	Mu                *sync.RWMutex
+	Line              string
+	Out               bool
+	Dir               string
+	Size              int64
+	EveryDay          bool
+	Name              string
+	Expire            int
+	Format            func(ctime time.Time, hostname, line, msg string, label map[string]string) string
+	cancel            context.CancelFunc
+	level             Level
+	task              *task
+	_logPriority      bool
+	_duplicates       int
+	_duplicateskey    map[string]int
+	_duplicatesLocker sync.Mutex
+	LogHandler        func(level Level, ctime time.Time, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -69,15 +70,21 @@ func containsSlice(str string, ss []string) bool {
 }
 
 // 默认false  也就是性能优先
-func (l *Log) SetLogPriority(logPriority bool) {
-	l._logPriority = logPriority
+func (l *Log) SetLogPriority(logPriority bool, duplicates int) {
+	if duplicates > 0 {
+		l._logPriority = logPriority
+		l._duplicates = duplicates
+		l._duplicateskey = make(map[string]int)
+		l._duplicatesLocker = sync.Mutex{}
+	}
+
 }
 
 // name : filename, size: mb,
 func NewLog(name string, size int64, everyday bool) *Log {
 	name = filepath.Base(name)
 	l := &Log{
-		Label:    make(map[string]string),
+		// Label:    make(map[string]string),
 		Mu:       &sync.RWMutex{},
 		Size:     size,
 		Dir:      _dir,
@@ -95,15 +102,8 @@ func NewLog(name string, size int64, everyday bool) *Log {
 	return l
 }
 
-func (l *Log) SetErrorHandler(eh func(time.Time, string, string, string, map[string]string)) {
-	l.ErrorHandler = eh
-}
-
-func (l *Log) SetWarnHandler(eh func(time.Time, string, string, string, map[string]string)) {
-	l.WarnHandler = eh
-}
-func (l *Log) SetInfoHandler(eh func(time.Time, string, string, string, map[string]string)) {
-	l.InfoHandler = eh
+func (l *Log) SetLogHandler(eh func(Level, time.Time, string, string, map[string]string)) {
+	l.LogHandler = eh
 }
 
 // 关闭log
@@ -117,25 +117,25 @@ func (l *Log) Close() {
 	l = nil
 }
 
-func (l *Log) SetLabel(key, value string) *Log {
-	l.Mu.Lock()
-	defer l.Mu.Unlock()
-	l.Label[key] = value
-	return l
-}
+// func (l *Log) SetLabel(key, value string) *Log {
+// 	l.Mu.Lock()
+// 	defer l.Mu.Unlock()
+// 	l.Label[key] = value
+// 	return l
+// }
 
-func (l *Log) DelLabel(key string) *Log {
-	l.Mu.RLock()
-	defer l.Mu.RUnlock()
-	delete(l.Label, key)
-	return l
-}
+// func (l *Log) DelLabel(key string) *Log {
+// 	l.Mu.RLock()
+// 	defer l.Mu.RUnlock()
+// 	delete(l.Label, key)
+// 	return l
+// }
 
-func (l *Log) GetLabel() map[string]string {
-	l.Mu.Lock()
-	defer l.Mu.Unlock()
-	return l.Label
-}
+// func (l *Log) GetLabel() map[string]string {
+// 	l.Mu.Lock()
+// 	defer l.Mu.Unlock()
+// 	return l.Label
+// }
 
 // open file，  所有日志默认前面加了时间，
 func (l *Log) Trace(msg ...interface{}) {
@@ -266,7 +266,7 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		ml.format = _formatFunc
 	}
 	ml.everyDay = l.EveryDay
-	ml.Label = l.GetLabel()
+	// ml.Label = l.GetLabel()
 
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
@@ -274,8 +274,23 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		ml.Line = printFileline(0)
 	}
 
+	if l._duplicateskey != nil {
+		key := ml.Line + ml.Msg
+		l._duplicatesLocker.Lock()
+		if _, ok := l._duplicateskey[key]; ok {
+			l._duplicateskey[key] = l._duplicateskey[key] + 1
+			if l._duplicateskey[key] == l._duplicates {
+				delete(l._duplicateskey, key)
+			}
+			l._duplicatesLocker.Unlock()
+			return
+		}
+		l._duplicateskey[key] = 0
+		l._duplicatesLocker.Unlock()
+	}
+
 	if LogHandler != nil {
-		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg, ml.Label)
+		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 	}
 
 	if l._logPriority {

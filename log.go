@@ -15,29 +15,21 @@ var (
 	_everyDay bool           // 每天一个来切割文件 （这个比上面个优先级高）
 	_dir      string = "log" // 文件目录
 	_name     string
+	// label             = make(map[string]string)
+	// labelLock         = sync.RWMutex{}
+	_logPriority      bool
+	_duplicates       int
+	_duplicateskey    map[string]int
+	_duplicatesLocker sync.Mutex
 )
 
 var once = sync.Once{}
 
-var LogHandler func(level Level, ctime time.Time, line, msg string, label map[string]string)
+var LogHandler func(level Level, ctime time.Time, line, msg string)
 
 // var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
-var label map[string]string
-var labelLock sync.RWMutex
-var _logPriority bool
-
-// hostname
-var hostname = ""
 
 // var cancel context.CancelFunc
-
-func init() {
-
-	hostname, _ = os.Hostname()
-	label = make(map[string]string)
-	labelLock = sync.RWMutex{}
-
-}
 
 func SetDir(dir string) {
 	_dir = filepath.Clean(dir)
@@ -48,9 +40,16 @@ func SetDir(dir string) {
 	}
 }
 
-// 默认false  也就是性能优先
-func SetLogPriority(logPriority bool) {
-	_logPriority = logPriority
+// 默认false  也就是日志优先,  类似 zap 开发模式， 打印所有日志， 设置true 的话， 类似 zap 生成模式，
+// 后面的duplicates 是重复多少条值打印一条,   如果小于等于0 相当于logPriority 为false
+func SetLogPriority(logPriority bool, duplicates int) {
+	if duplicates > 0 {
+		_logPriority = logPriority
+		_duplicates = duplicates
+		_duplicateskey = make(map[string]int)
+		_duplicatesLocker = sync.Mutex{}
+	}
+
 }
 
 // name : filename, size: mb,
@@ -80,29 +79,29 @@ func InitLogger(name string, size int64, everyday bool) {
 // 	})
 // }
 
-func AddLabel(key, value string) {
-	labelLock.RLock()
-	defer labelLock.RUnlock()
-	label[key] = value
-}
+// func AddLabel(key, value string) {
+// 	labelLock.RLock()
+// 	defer labelLock.RUnlock()
+// 	label[key] = value
+// }
 
-func SetLabel(key, value string) {
-	labelLock.RLock()
-	defer labelLock.RUnlock()
-	label[key] = value
-}
+// func SetLabel(key, value string) {
+// 	labelLock.RLock()
+// 	defer labelLock.RUnlock()
+// 	label[key] = value
+// }
 
-func DelLabel(key string) {
-	labelLock.Lock()
-	defer labelLock.Unlock()
-	delete(label, key)
-}
+// func DelLabel(key string) {
+// 	labelLock.Lock()
+// 	defer labelLock.Unlock()
+// 	delete(label, key)
+// }
 
-func GetLabel() map[string]string {
-	labelLock.RLock()
-	defer labelLock.RUnlock()
-	return label
-}
+// func GetLabel() map[string]string {
+// 	labelLock.RLock()
+// 	defer labelLock.RUnlock()
+// 	return label
+// }
 
 // open file，  所有日志默认前面加了时间，
 func Tracef(format string, args ...interface{}) {
@@ -246,15 +245,28 @@ func s(level Level, msg string, deep ...int) {
 	ml.Level = level
 	ml.Msg = msg
 	ml.Ctime = time.Now()
-	ml.Label = GetLabel()
+	// ml.Label = GetLabel()
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
 	} else {
 		ml.Line = printFileline(0)
 	}
-
+	if _duplicateskey != nil {
+		key := ml.Line + ml.Msg
+		_duplicatesLocker.Lock()
+		if _, ok := _duplicateskey[key]; ok {
+			_duplicateskey[key] = _duplicateskey[key] + 1
+			if _duplicateskey[key] == _duplicates {
+				delete(_duplicateskey, key)
+			}
+			_duplicatesLocker.Unlock()
+			return
+		}
+		_duplicateskey[key] = 0
+		_duplicatesLocker.Unlock()
+	}
 	if LogHandler != nil {
-		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg, ml.Label)
+		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 	}
 	// if ml.out {
 	// 	// 控制台才添加颜色， 否则不添加颜色
