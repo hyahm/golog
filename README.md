@@ -194,7 +194,6 @@ func main() {
 	// 默认是 log
 	// 设置清除7小时以前的日志
 	golog.InitLogger("test.log", 0, true)
-    golog.AddClean("test.log")   // 如果需要清除，必须要添加需要删除的文件， 全局的配置， 任何地方添加都会生效 方便多个日志实例
 	golog.Infof("adf%s", "cander")
 	// log/test.log: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:13 - adfcander
 }
