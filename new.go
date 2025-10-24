@@ -17,25 +17,23 @@ var ShowBasePath bool
 type Log struct {
 	Create time.Time
 	// Label             map[string]string
-	Deep              int
-	Color             []color.Attribute
-	Mu                *sync.RWMutex
-	Line              string
-	Out               bool
-	Dir               string
-	Size              int64
-	EveryDay          bool
-	Name              string
-	Expire            int
-	Format            func(ctime time.Time, hostname, line, msg string, label map[string]string) string
-	cancel            context.CancelFunc
-	level             Level
-	task              *task
-	_logPriority      bool
-	_duplicates       int
-	_duplicateskey    map[string]int
-	_duplicatesLocker sync.Mutex
-	LogHandler        func(level Level, ctime time.Time, line, msg string, label map[string]string)
+	Deep        int
+	Color       []color.Attribute
+	Mu          *sync.RWMutex
+	Line        string
+	Out         bool
+	Dir         string
+	Size        int64
+	EveryDay    bool
+	Name        string
+	Expire      int
+	Format      func(ctime time.Time, hostname, line, msg string, label map[string]string) string
+	cancel      context.CancelFunc
+	level       Level
+	task        *task
+	logPriority bool
+	duplicates  duplicate
+	LogHandler  func(level Level, ctime time.Time, line, msg string, label map[string]string)
 }
 
 // 递归遍历文件夹
@@ -71,11 +69,9 @@ func containsSlice(str string, ss []string) bool {
 
 // 默认false  也就是性能优先
 func (l *Log) SetLogPriority(logPriority bool, duplicates int) {
-	if duplicates > 0 {
-		l._logPriority = logPriority
-		l._duplicates = duplicates
-		l._duplicateskey = make(map[string]int)
-		l._duplicatesLocker = sync.Mutex{}
+	l.logPriority = logPriority
+	if l.logPriority && duplicates > 0 {
+		l.duplicates.initDuplicate(duplicates)
 	}
 
 }
@@ -274,26 +270,18 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		ml.Line = printFileline(0)
 	}
 
-	if l._duplicateskey != nil {
+	if l.logPriority {
 		key := ml.Line + ml.Msg
-		l._duplicatesLocker.Lock()
-		if _, ok := l._duplicateskey[key]; ok {
-			l._duplicateskey[key] = l._duplicateskey[key] + 1
-			if l._duplicateskey[key] == l._duplicates {
-				delete(l._duplicateskey, key)
-			}
-			l._duplicatesLocker.Unlock()
+		if !l.duplicates.addMsg(key) {
 			return
 		}
-		l._duplicateskey[key] = 0
-		l._duplicatesLocker.Unlock()
 	}
 
 	if LogHandler != nil {
 		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 	}
 
-	if l._logPriority {
+	if l.logPriority {
 		l.task.cache <- ml
 	} else {
 		select {

@@ -11,16 +11,13 @@ import (
 
 var (
 	// _logPath   string // 文件路径
-	_fileSize int64          // 切割的文件大小默认单位M
-	_everyDay bool           // 每天一个来切割文件 （这个比上面个优先级高）
-	_dir      string = "log" // 文件目录
+	_fileSize int64   // 切割的文件大小默认单位M
+	_everyDay bool    // 每天一个来切割文件 （这个比上面个优先级高）
+	_dir      = "log" // 文件目录
 	_name     string
 	// label             = make(map[string]string)
 	// labelLock         = sync.RWMutex{}
-	_logPriority      bool
-	_duplicates       int
-	_duplicateskey    map[string]int
-	_duplicatesLocker sync.Mutex
+	_logPriority bool
 )
 
 var once = sync.Once{}
@@ -43,11 +40,9 @@ func SetDir(dir string) {
 // 默认false  也就是日志优先,  类似 zap 开发模式， 打印所有日志， 设置true 的话， 类似 zap 生成模式，
 // 后面的duplicates 是重复多少条值打印一条,   如果小于等于0 相当于logPriority 为false
 func SetLogPriority(logPriority bool, duplicates int) {
-	if duplicates > 0 {
-		_logPriority = logPriority
-		_duplicates = duplicates
-		_duplicateskey = make(map[string]int)
-		_duplicatesLocker = sync.Mutex{}
+	_logPriority = logPriority
+	if _logPriority && duplicates > 0 {
+		duplicateVal.initDuplicate(duplicates)
 	}
 
 }
@@ -251,19 +246,11 @@ func s(level Level, msg string, deep ...int) {
 	} else {
 		ml.Line = printFileline(0)
 	}
-	if _duplicateskey != nil {
+	if _logPriority {
 		key := ml.Line + ml.Msg
-		_duplicatesLocker.Lock()
-		if _, ok := _duplicateskey[key]; ok {
-			_duplicateskey[key] = _duplicateskey[key] + 1
-			if _duplicateskey[key] == _duplicates {
-				delete(_duplicateskey, key)
-			}
-			_duplicatesLocker.Unlock()
+		if !duplicateVal.addMsg(key) {
 			return
 		}
-		_duplicateskey[key] = 0
-		_duplicatesLocker.Unlock()
 	}
 	if LogHandler != nil {
 		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
