@@ -93,7 +93,10 @@ var _expireClean time.Duration = time.Hour * 24 * 365
 
 // 设置清理时间 默认365天
 func SetExpireDuration(d time.Duration) {
-	_expireClean = d
+	if d > 0 {
+		_expireClean = d
+	}
+
 }
 
 func Sync() {
