@@ -19,11 +19,12 @@ type duplicate struct {
 	locker sync.RWMutex
 }
 
-func (d *duplicate) initDuplicate(count int) {
+func (d *duplicate) initDuplicate(count int, dd time.Duration) {
 	d.count = count
 	d.key = make(map[string]*msgCache)
 	d.locker = sync.RWMutex{}
-	go d.cleanDuplicate()
+
+	go d.cleanDuplicate(dd)
 }
 
 // 返回是否要写入
@@ -37,19 +38,22 @@ func (d *duplicate) addMsg(key string) bool {
 		return true
 	}
 	d.key[key].count += 1
+	fmt.Println(d.key[key].count)
 	if d.key[key].count == d.count {
 		delete(d.key, key)
 	}
 	return false
 }
 
-func (d *duplicate) cleanDuplicate() {
+func (d *duplicate) cleanDuplicate(dd time.Duration) {
 	for {
 		d.locker.Lock()
 		for k := range d.key {
-			fmt.Println(d.key[k].start.Sub(time.Now()))
-			// 如果
+			if time.Since(d.key[k].start) > dd {
+				delete(d.key, k)
+			}
 		}
-		time.Sleep(time.Minute)
+		d.locker.Unlock()
+		time.Sleep(dd)
 	}
 }

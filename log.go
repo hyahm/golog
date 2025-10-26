@@ -39,12 +39,17 @@ func SetDir(dir string) {
 
 // 默认false  也就是日志优先,  类似 zap 开发模式， 打印所有日志， 设置true 的话， 类似 zap 生成模式，
 // 后面的duplicates 是重复多少条值打印一条,   如果小于等于0 相当于logPriority 为false
-func SetLogPriority(logPriority bool, duplicates int) {
+func SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
 	_logPriority = logPriority
 	if _logPriority && duplicates > 0 {
-		duplicateVal.initDuplicate(duplicates)
+		cleanDuplicate := time.Minute
+		if len(dd) > 0 {
+			cleanDuplicate = dd[0]
+		}
+		duplicateVal.initDuplicate(duplicates, cleanDuplicate)
+		return
 	}
-
+	_logPriority = false
 }
 
 // name : filename, size: mb,

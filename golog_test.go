@@ -2,6 +2,7 @@ package golog
 
 import (
 	"testing"
+	"time"
 )
 
 func TestInitLogger(t *testing.T) {
@@ -25,14 +26,9 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	for range 100 {
+	for {
 		Infof("消息%s", "asdfasdf")
-		Info("消息")
-		Error("失败")
-		Error("失败")
-		Error("失败")
-		Error("失败")
-		UpFunc(1, "111")
+		time.Sleep(10 * time.Microsecond)
 	}
 
 	// time.Sleep(1 * time.Second)

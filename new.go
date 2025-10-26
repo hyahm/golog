@@ -68,12 +68,17 @@ func containsSlice(str string, ss []string) bool {
 }
 
 // 默认false  也就是性能优先
-func (l *Log) SetLogPriority(logPriority bool, duplicates int) {
+func (l *Log) SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
 	l.logPriority = logPriority
 	if l.logPriority && duplicates > 0 {
-		l.duplicates.initDuplicate(duplicates)
+		cleanDuplicate := time.Minute
+		if len(dd) > 0 {
+			cleanDuplicate = dd[0]
+		}
+		l.duplicates.initDuplicate(duplicates, cleanDuplicate)
+		return
 	}
-
+	l.logPriority = false
 }
 
 // name : filename, size: mb,
