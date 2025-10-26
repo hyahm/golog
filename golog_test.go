@@ -10,7 +10,7 @@ func TestInitLogger(t *testing.T) {
 	// InitLogger("aa.log", 10, false)
 	// SetExpireDuration(time.Second)
 	SetLevel(DEBUG)
-	SetLogPriority(true, 100)
+	SetLogPriority(true, 100, time.Minute)
 	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
 	// l := NewLog("", 0, true)

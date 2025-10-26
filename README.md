@@ -289,8 +289,8 @@ import (
 
 func main() {
 	defer golog.Sync()
-	// 日志文件优先，  会完全保留所有日志，  默认false，  默认性能优先， 日志处理不过来会丢弃， 默认缓冲1000条
-	golog.SetLogPriority(true, 100)
+	// 日志文件优先， 日志量大的话， 使用后可以减少重复的日志打印， 下面的配置是每分钟100条的重复数据只打印一条
+	golog.SetLogPriority(true, 100, time.Minute)
 }
 
 

@@ -1,7 +1,6 @@
 package golog
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -38,7 +37,6 @@ func (d *duplicate) addMsg(key string) bool {
 		return true
 	}
 	d.key[key].count += 1
-	fmt.Println(d.key[key].count)
 	if d.key[key].count == d.count {
 		delete(d.key, key)
 	}
