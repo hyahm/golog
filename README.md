@@ -199,21 +199,6 @@ func main() {
 }
 ```
 
-### 增加Label标签
-```go
-package main
-
-import (
-	"github.com/hyahm/golog"
-)
-
-func main() {
-	defer golog.Sync()
-	golog.AddLabel("key1", "value1")
-	golog.AddLabel("key2", "value2")
-	golog.Info("foo") // stdout: 2022-03-04 10:32:51 - [INFO] - [key1:value1][key2:value2] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:11 - foo
-}
-```
 
 ### 多文件操作
 ```go
@@ -295,4 +280,5 @@ func main() {
 
 
 ```
+
 
