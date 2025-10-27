@@ -9,32 +9,22 @@ go version >= 1.25.0
 ```
 
 ### 日志自定义格式化
-> 通过 golog.Format 设置输出格式，默认的输出格式如下
+> 通过 golog.SetFormatFunc 设置输出格式，默认的输出格式如下
 
 ```go
  
- json 格式
-func JsonFormat(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
-	labels := make([]string, 0, len(label))
-	if len(label) > 0 {
-		for k, v := range label {
-			labels = append(labels, fmt.Sprintf(`"%s": "%s"`, k, v))
-		}
-		return fmt.Sprintf(`{"createTime": "%s", %s, "level": "%s","hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", strings.Join(labels, ","), ctime.String(), level, hostname, line, msg)
-	}
 
-	return fmt.Sprintf(`{"createTime": "%s","level": "%s", "hostname": "%s", "line": "%s", "msg": "%s"}`+"\n", ctime.String(), level, hostname, line, msg)
+func JsonFormat(level Level, ctime time.Time, line, msg string) string {
+	return fmt.Sprintf(`{"createTime": "%s","level": "%s",  "line": "%s", "msg": "%s"}`+"\n", ctime.String()[:23], level, line, msg)
+}
+
+func defaultFormat(level Level, ctime time.Time, line, msg string) string {
+	return fmt.Sprintf(`%s -- [%s] -- %s -- %s`+"\n", ctime.String()[:23], level, line, msg)
 }
 
 
-上面是默认的格式
-
-
-下面自定义格式， 因为没用到label 就不需要判断label
-
-	SetFormatFunc(func(ctime time.Time, level, hostname, line, msg string, label map[string]string) string {
-		return fmt.Sprintf(`createTime -- %s --- hostname: %s, "line": "%s", "msg": "%s"}`+"\n", ctime.String(), hostname, line, msg)
-	})
+	默认使用的 defaultFormat，下面使用 json格式的  可以自定义格式
+	SetFormatFunc(golog.JsonFormat)
 
 
 
@@ -55,32 +45,10 @@ func main() {
 	
 	golog.Info("one") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - one
 	golog.Info("adf", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:9 - adf cander
-	golog.ShowBasePath = true
-	golog.Info("adf", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - example.go:9 - adf cander
+
 }
 ```
 
-
-### 格式化打印
-
-```go
-package main
-
-import (
-	"github.com/hyahm/golog"
-)
-
-func main() {
-	defer golog.Sync()
-	// 虽然是可视化输出，
-	golog.Infof("adf%s\n", "cander") // stdout: 2022-03-04 10:19:31 - [INFO] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:11 - adfcander
-	// 默认的日志级别是info， 所以debug级别不会打印出来,
-	golog.Debug("foo") // stdout: nothing
-	// 通过 golog.Level = golog.DEBUG 可以设置级别为DEBUG
-	golog.Level = golog.DEBUG //
-	golog.Debug("bar")        // stdout: 2022-03-04 10:21:00 - [DEBUG] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:14 - bar
-}
-```
 
 ### 按照日志级别打印
 
@@ -159,8 +127,8 @@ import (
 func main() {
 	defer golog.Sync()
 	// 如果设置了 过期清除日志 需要加上文件名进行精准删除，没有文件名则无效  否则不用加
-	// 所有实例都会在这个目录下面， 方便下面介绍的清理日志
-	golog.SetDir("log")
+	// 所有实例都会在这个目录下面， 方便下面介绍的清理日志， 默认就是当前 log 目录下, 所以也可以不写
+	golog.SetDir("log")  
 	
 	golog.InitLogger("test.log", 0, true)
 	// 只要需要分隔文件 要清
@@ -183,7 +151,7 @@ import (
 
 func main() {
 	defer golog.Sync()
-    // golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
+    golog.SetExpireDuration(time.Hour * 24 * 7)  // 不写默认一年
 	
 	// 第一个参数是设置日志文件名 ， 
 	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
@@ -199,21 +167,6 @@ func main() {
 }
 ```
 
-### 增加Label标签
-```go
-package main
-
-import (
-	"github.com/hyahm/golog"
-)
-
-func main() {
-	defer golog.Sync()
-	golog.AddLabel("key1", "value1")
-	golog.AddLabel("key2", "value2")
-	golog.Info("foo") // stdout: 2022-03-04 10:32:51 - [INFO] - [key1:value1][key2:value2] - DESKTOP-NENB5CA - C:/work/golog/example/example.go:11 - foo
-}
-```
 
 ### 多文件操作
 ```go
@@ -224,8 +177,10 @@ import (
 )
 
 func main() {
+    // 如果名称为空， 则默认打印到控制台
 	logger1 := golog.NewLog("test1.log", 0, false) // 这是操作log/test1.log的实例， 用法与golog的方法使用一致
 	defer logger1.Sync()
+    
 	logger2 := golog.NewLog("test2.log", 0, false) // 这是操作log/test2.log的实例， 用法与golog的方法使用一致
 	defer logger2.Sync()
 	logger1.Info("foo")
@@ -234,25 +189,16 @@ func main() {
 }
 ```
 
-### 增加ErrorHandler , InfoHandler的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
+### 回调函数
 ```go
-	// 为什么只有info, warn 和 error  ， 因为只有这3个开发最常用   debug 建议做本地调试使用， 如果要更新细致的处理，建议搭配 label
+	
 	defer golog.Sync()
 	
-	golog.ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以自定义报警信息， 方便及时知道运行中代码内的错误
-		fmt.Println("你的代码出问题了")
-	}
-	golog.WarnHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以对info 信息做处理，
+	golog.LogHandler = func(level Level, ctime time.Time, line, msg string) {
+		// 可以自定义报警信息， 方便及时知道运行中代码内的错误， 进行二次处理
 		fmt.Println("你的代码出问题了")
 	}
 
-	golog.InfoHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以对info 信息做处理，
-		fmt.Println("你的代码出问题了")
-	}
-	golog.Error("aaaaaa")
 ```
 
 
@@ -295,4 +241,7 @@ func main() {
 
 
 ```
+
+
+
 
