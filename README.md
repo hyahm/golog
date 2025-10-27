@@ -159,7 +159,7 @@ import (
 func main() {
 	defer golog.Sync()
 	// 如果设置了 过期清除日志 需要加上文件名进行精准删除，没有文件名则无效  否则不用加
-	// 所有实例都会在这个目录下面， 方便下面介绍的清理日志
+	// 所有实例都会在这个目录下面， 方便下面介绍的清理日志， 默认就是当前 log 目录下
 	golog.SetDir("log")
 	
 	golog.InitLogger("test.log", 0, true)
@@ -183,7 +183,7 @@ import (
 
 func main() {
 	defer golog.Sync()
-    // golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
+    golog.SetExpireDuration(time.Hour * 24 * 7)  // 默认一年
 	
 	// 第一个参数是设置日志文件名 ， 
 	// 第二个参数是设置日志切割的大小，0 表示不按照大小切割， 默认单位M，
@@ -219,25 +219,16 @@ func main() {
 }
 ```
 
-### 增加ErrorHandler , InfoHandler的回调函数，  方便报警, 只有在调用golog.Error\[f\]()的时候才会调用
+### 增加回调函数
 ```go
-	// 为什么只有info, warn 和 error  ， 因为只有这3个开发最常用   debug 建议做本地调试使用， 如果要更新细致的处理，建议搭配 label
+	
 	defer golog.Sync()
 	
-	golog.ErrorHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以自定义报警信息， 方便及时知道运行中代码内的错误
-		fmt.Println("你的代码出问题了")
-	}
-	golog.WarnHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以对info 信息做处理，
+	golog.LogHandler = func(level Level, ctime time.Time, line, msg string) {
+		// 可以自定义报警信息， 方便及时知道运行中代码内的错误， 进行二次处理
 		fmt.Println("你的代码出问题了")
 	}
 
-	golog.InfoHandler = func(ctime, hostname, line, msg string, label map[string]string) {
-		// 可以对info 信息做处理，
-		fmt.Println("你的代码出问题了")
-	}
-	golog.Error("aaaaaa")
 ```
 
 
@@ -280,5 +271,6 @@ func main() {
 
 
 ```
+
 
 
