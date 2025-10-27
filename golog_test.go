@@ -11,6 +11,7 @@ func TestInitLogger(t *testing.T) {
 	// SetExpireDuration(time.Second)
 	SetLevel(DEBUG)
 	SetLogPriority(true, 100, time.Minute)
+	SetFormatFunc(JsonFormat)
 	// SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
 	// l := NewLog("", 0, true)
