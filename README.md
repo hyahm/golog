@@ -213,7 +213,7 @@ import (
 func main() {
 	defer golog.Sync()
 	golog.Info("foo")
-	golog.Level = golog.DEBUG
+	golog.SetLevel(golog.DEBUG)
 	test()
 	golog.Info("bar")
 }
@@ -241,6 +241,7 @@ func main() {
 
 
 ```
+
 
 
 
