@@ -54,6 +54,25 @@ func SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
 
 // name : filename, size: mb,
 func InitLogger(name string, size int64, everyday bool) {
+	// 如果要写入文件
+	if name != "" {
+		fi, err := os.Stat(_dir)
+		if err == nil && !fi.IsDir() {
+			// 如果存在这个文件， 直接跳过
+			fmt.Printf("%s is not a directory, will input log to the console \n", _dir)
+			_name = ""
+			return
+		}
+		if err != nil {
+			// 目录不存在就创建
+			if err = os.MkdirAll(_dir, 0755); err != nil {
+				fmt.Println(err)
+				return
+			}
+
+		}
+
+	}
 
 	_name = filepath.Base(name)
 	_fileSize = size

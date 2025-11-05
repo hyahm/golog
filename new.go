@@ -83,6 +83,23 @@ func (l *Log) SetLogPriority(logPriority bool, duplicates int, dd ...time.Durati
 
 // name : filename, size: mb,
 func NewLog(name string, size int64, everyday bool) *Log {
+	if name != "" {
+		fi, err := os.Stat(_dir)
+		if err == nil && !fi.IsDir() {
+			// 如果存在这个文件， 直接跳过
+			fmt.Printf("%s is not a directory, will input log to the console \n", _dir)
+			_name = ""
+		}
+		if err != nil {
+			// 目录不存在就创建
+			if err = os.MkdirAll(_dir, 0755); err != nil {
+				fmt.Println(err)
+				name = ""
+			}
+
+		}
+
+	}
 	name = filepath.Base(name)
 	l := &Log{
 		// Label:    make(map[string]string),
