@@ -283,8 +283,8 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 	} else {
 		ml.format = _formatFunc
 	}
+
 	ml.everyDay = l.EveryDay
-	// ml.Label = l.GetLabel()
 
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
@@ -293,8 +293,7 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 	}
 
 	if l.logPriority {
-		key := ml.Line + ml.Msg
-		if !l.duplicates.addMsg(key) {
+		if !l.duplicates.addMsg(ml.Line + ml.Msg) {
 			return
 		}
 	}

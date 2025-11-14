@@ -37,19 +37,22 @@ func (t *task) write() {
 	for {
 		select {
 		case <-ticker.C:
+			// 不管有没有写满， 200毫秒必须
 			if len(cl.Msg) > 0 {
 				t.control(cl)
 				cl.Msg = ""
-
+				cl.day = 0
 			}
 
 		case c, ok := <-t.cache:
 
 			// fmt.Println("--------------", c.Msg)
 			if !ok {
+				// 关闭通道 的操作
 				if len(cl.Msg) > 0 {
 					t.control(cl)
 					cl.Msg = ""
+					cl.day = 0
 				}
 				t.exit <- struct{}{}
 				return
@@ -62,16 +65,19 @@ func (t *task) write() {
 			if c.out {
 				// 有带颜色日志要实时打印
 				t.control(c)
+				cl.Msg = ""
+				cl.day = 0
 				continue
 			}
 
-			if c.Ctime.Day() != logdate.Day() {
-				t.control(cl)
-				cl.Msg = ""
+			if cl.day != 0 && c.Ctime.Day() != cl.day {
+				t.control(c)
+				continue
 			}
 			cl.dir = c.dir
 			cl.out = c.out
 			cl.name = c.name
+			cl.day = c.Ctime.Day()
 			cl.everyDay = c.everyDay
 			cl.Ctime = c.Ctime
 			cl.size = c.size
@@ -79,10 +85,12 @@ func (t *task) write() {
 			cl.Msg += c.Msg
 
 			if len(cl.Msg) < BLOCKSIZE {
+				// 缓存没满就继续
 				continue
 			}
 			t.control(cl)
 			cl.Msg = ""
+			cl.day = 0
 
 		}
 	}

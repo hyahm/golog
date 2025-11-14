@@ -27,10 +27,10 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	// for {
-	l2.Infof("消息%s", "asdfasdf")
-	// 	time.Sleep(10 * time.Microsecond)
-	// }
+	for {
+		l2.Infof("消息%s", "asdfasdf")
+		time.Sleep(time.Second)
+	}
 
 	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
