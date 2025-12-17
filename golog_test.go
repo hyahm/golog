@@ -8,7 +8,7 @@ import (
 func TestInitLogger(t *testing.T) {
 	defer Sync()
 	// InitLogger("aa.log", 10, false)
-	// SetExpireDuration(time.Second)
+	SetExpireDuration(time.Second * 5)
 	SetLevel(DEBUG)
 	SetLogPriority(true, 100, time.Minute)
 	SetFormatFunc(JsonFormat)
@@ -18,7 +18,7 @@ func TestInitLogger(t *testing.T) {
 	l2 := NewLog("aa.log", 0, true)
 	// defer l.Sync()
 	defer l2.Sync()
-	// NewLog("test.log", 10, false, 7)
+	NewLog("test.log", 10, false)
 	// ShowBasePath = true
 
 	// WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
