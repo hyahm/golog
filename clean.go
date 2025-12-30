@@ -26,7 +26,7 @@ func addClean(names ...string) {
 }
 
 func clean() {
-	ticker := time.NewTicker(_expireClean)
+	ticker := time.NewTicker(time.Hour * 24)
 	defer ticker.Stop()
 	walkDir()
 	for range ticker.C {
