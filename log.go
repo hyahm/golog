@@ -46,7 +46,7 @@ func SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
 		if len(dd) > 0 {
 			cleanDuplicate = dd[0]
 		}
-		duplicateVal.initDuplicate(duplicates, cleanDuplicate)
+		duplicateVal = newDuplicate(duplicates, cleanDuplicate)
 		return
 	}
 	_logPriority = false

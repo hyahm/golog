@@ -8,28 +8,26 @@ import (
 func TestInitLogger(t *testing.T) {
 	defer Sync()
 	// InitLogger("aa.log", 10, false)
-	SetExpireDuration(time.Second * 5)
+	// SetExpireDuration(time.Second * 5)
 	SetLevel(DEBUG)
 	SetLogPriority(true, 100, time.Minute)
 	SetFormatFunc(JsonFormat)
-	// SetExpireDuration(time.Second * 10)
+	SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
 	// l := NewLog("", 0, true)
-	l2 := NewLog("aa.log", 0, true)
+	// l2 := NewLog("", 0, true)
 	// defer l.Sync()
-	defer l2.Sync()
-	NewLog("test.log", 10, false)
+	// defer l2.Sync()
 	// ShowBasePath = true
-
+	// l2.SetLogPriority(true, 100, time.Minute)
 	// WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	for {
-		l2.Infof("消息%s", "asdfasdf")
-		time.Sleep(time.Second)
+	for range 101 {
+		Infof("消息%s", "asdfasdf")
 	}
 
 	// time.Sleep(1 * time.Second)

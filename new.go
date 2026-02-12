@@ -32,7 +32,7 @@ type Log struct {
 	level       Level
 	task        *task
 	logPriority bool
-	duplicates  duplicate
+	duplicates  *duplicate
 	LogHandler  func(level Level, ctime time.Time, line, msg string, label map[string]string)
 }
 
@@ -75,7 +75,7 @@ func (l *Log) SetLogPriority(logPriority bool, duplicates int, dd ...time.Durati
 		if len(dd) > 0 {
 			cleanDuplicate = dd[0]
 		}
-		l.duplicates.initDuplicate(duplicates, cleanDuplicate)
+		l.duplicates = newDuplicate(duplicates, cleanDuplicate)
 		return
 	}
 	l.logPriority = false
