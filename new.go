@@ -191,7 +191,7 @@ func (l *Log) Level() Level {
 func (l *Log) Debugf(format string, msg ...interface{}) {
 	// Access,
 	if l.level <= DEBUG {
-		l.s(DEBUG, arrToString(msg...))
+		l.s(DEBUG, fmt.Sprintf(format, msg...))
 	}
 }
 
@@ -204,7 +204,7 @@ func (l *Log) Info(msg ...interface{}) {
 func (l *Log) Infof(format string, msg ...interface{}) {
 	// Access,
 	if l.level <= INFO {
-		l.s(INFO, arrToString(msg...))
+		l.s(INFO, fmt.Sprintf(format, msg...))
 	}
 }
 
@@ -219,7 +219,7 @@ func (l *Log) Warn(msg ...interface{}) {
 func (l *Log) Warnf(format string, msg ...interface{}) {
 	// Access,
 	if l.level <= WARN {
-		l.s(WARN, arrToString(msg...))
+		l.s(WARN, fmt.Sprintf(format, msg...))
 	}
 }
 
@@ -234,7 +234,7 @@ func (l *Log) Error(msg ...interface{}) {
 func (l *Log) Errorf(format string, msg ...interface{}) {
 	// Access,
 	if l.level <= ERROR {
-		l.s(ERROR, arrToString(msg...))
+		l.s(ERROR, fmt.Sprintf(format, msg...))
 	}
 }
 
@@ -249,7 +249,7 @@ func (l *Log) Fatal(msg ...interface{}) {
 func (l *Log) Fatalf(format string, msg ...interface{}) {
 	// Access,
 	if l.level <= FATAL {
-		l.s(FATAL, arrToString(msg...))
+		l.s(FATAL, fmt.Sprintf(format, msg...))
 	}
 }
 

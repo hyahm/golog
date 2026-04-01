@@ -14,9 +14,10 @@ func TestInitLogger(t *testing.T) {
 	SetFormatFunc(JsonFormat)
 	SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
-	// l := NewLog("", 0, true)
+	l := NewLog("", 0, true)
 	// l2 := NewLog("", 0, true)
-	// defer l.Sync()
+	defer l.Sync()
+	l.Infof("Asdfasdf%d", 10)
 	// defer l2.Sync()
 	// ShowBasePath = true
 	// l2.SetLogPriority(true, 100, time.Minute)
