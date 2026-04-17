@@ -1,6 +1,8 @@
 package golog
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -30,6 +32,7 @@ func TestInitLogger(t *testing.T) {
 	for range 101 {
 		Infof("消息%s", "asdfasdf")
 	}
+	fmt.Println(Wrap(a()))
 
 	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
@@ -42,4 +45,8 @@ func TestInitLogger(t *testing.T) {
 	// // test()
 	// a.Error("bar")
 	// time.Sleep(time.Second * 100)
+}
+
+func a() error {
+	return errors.New("aaaaa")
 }

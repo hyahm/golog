@@ -177,7 +177,7 @@ func UpFuncf(deep int, format string, args ...interface{}) {
 func Trace(msg ...interface{}) {
 	// Access,
 	if _level <= TRACE {
-		s(TRACE, fmt.Sprint(msg...))
+		s(TRACE, arrToString(msg...))
 	}
 }
 
@@ -185,14 +185,14 @@ func Trace(msg ...interface{}) {
 func Debug(msg ...interface{}) {
 	// debug,
 	if _level <= DEBUG {
-		s(DEBUG, fmt.Sprint(msg...))
+		s(DEBUG, arrToString(msg...))
 	}
 }
 
 // open file，  所有日志默认前面加了时间，
 func Info(msg ...interface{}) {
 	if _level <= INFO {
-		s(INFO, fmt.Sprint(msg...))
+		s(INFO, arrToString(msg...))
 	}
 }
 
@@ -218,6 +218,11 @@ func Fatal(msg ...interface{}) {
 		s(FATAL, arrToString(msg...))
 	}
 	os.Exit(1)
+}
+
+func Wrap(err error) error {
+	// error日志，添加了错误函数，
+	return fmt.Errorf("%s -- %w", printFileline(-1), err)
 }
 
 func UpFunc(deep int, msg ...interface{}) {
