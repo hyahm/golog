@@ -242,6 +242,21 @@ func main() {
 
 ```
 
+### 错误日志源头追踪
+```go
+同步函数  
+golog.Wrap(err error) error
+
+
+func (p project) DeleteProject(projectId int64) error {
+	return golog.Wrap(db.Gorm.Table(p.table).Where("pid=?", projectId).Delete(nil).Error)
+}
+
+最外层打印 自动追加来源路径
+ D:/cander/ITflow/go/app/repo/bugs.go:23 -- Error 1054 (42S22): Unknown column 'pid' in 'where clause'
+```
+
+
 
 
 
