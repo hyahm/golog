@@ -222,6 +222,9 @@ func Fatal(msg ...interface{}) {
 
 func Wrap(err error) error {
 	// error日志，添加了错误函数，
+	if err == nil {
+		return nil
+	}
 	return fmt.Errorf("%s -- %w", printFileline(-1), err)
 }
 
