@@ -227,6 +227,10 @@ func Wrap(err error) error {
 	}
 	return fmt.Errorf("%s -- %w", printFileline(-1), err)
 }
+func Wraps(err string) error {
+	// error日志，添加了错误函数，
+	return fmt.Errorf("%s -- %s", printFileline(-1), err)
+}
 
 func UpFunc(deep int, msg ...interface{}) {
 	// deep打印函数的深度， 相对于当前位置向外的深度
