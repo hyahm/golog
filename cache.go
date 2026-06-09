@@ -26,7 +26,7 @@ type msgLog struct {
 }
 
 type cacheName struct {
-	name map[string]struct{}
+	name map[string]bool
 	mu   sync.RWMutex
 }
 
@@ -34,20 +34,21 @@ var cn *cacheName
 
 func init() {
 	cn = &cacheName{
-		name: make(map[string]struct{}),
+		name: make(map[string]bool),
 		mu:   sync.RWMutex{},
 	}
 }
 
-func checkName(name string) {
+func checkName(name string) bool {
 	fmt.Println(name)
 	if name == "" || name == "." {
-		return
+		return true
 	}
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 	if _, ok := cn.name[name]; ok {
-		panic("Repeated Sync() invocations on log instances of the same name: " + name)
+		return false
 	}
-	cn.name[name] = struct{}{}
+	cn.name[name] = true
+	return false
 }
