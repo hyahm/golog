@@ -1,6 +1,8 @@
 package golog
 
 import (
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -21,51 +23,31 @@ type msgLog struct {
 	everyDay bool
 	format   func(level Level, ctime time.Time, line, msg string) string
 	day      int
-	// now      time.Time
-	// Label map[string]string
-	// ErrorHandler func(time.Time, string, string, string, map[string]string)
-	// InfoHandler  func(time.Time, string, string, string, map[string]string)
-	// WarnHandler  func(time.Time, string, string, string, map[string]string)
-	// buf *bytes.Buffer
 }
 
-// var exit chan bool
+type cacheName struct {
+	name map[string]struct{}
+	mu   sync.RWMutex
+}
 
-// 递归遍历文件夹
-// func walkDir() error {
-// 	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
-// 		if err != nil {
-// 			Error(err)
-// 			return err
-// 		}
+var cn *cacheName
 
-// 		// 如果是文件，打印文件路径和修改时间
-// 		if !info.IsDir() && strings.Contains(fp, _name) {
-// 			modTime := info.ModTime()
-// 			if time.Since(modTime) > time.Duration(_expire)*DefaultUnit {
-// 				os.Remove(fp)
-// 			}
-// 		}
-// 		return nil
-// 	})
-// }
+func init() {
+	cn = &cacheName{
+		name: make(map[string]struct{}),
+		mu:   sync.RWMutex{},
+	}
+}
 
-// func clean(ctx context.Context) {
-// 	for {
-// 		select {
-// 		case <-time.After(time.Duration(_expire) * DefaultUnit):
-// 			fmt.Println("clean log")
-// 			walkDir()
-// 		case <-ctx.Done():
-// 			return
-// 		}
-
-// 	}
-// }
-
-// func SecondCache() {
-
-// 	for c := range cache {
-// 		c.control()
-// 	}
-// }
+func checkName(name string) {
+	fmt.Println(name)
+	if name == "" || name == "." {
+		return
+	}
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
+	if _, ok := cn.name[name]; ok {
+		panic("Repeated Sync() invocations on log instances of the same name: " + name)
+	}
+	cn.name[name] = struct{}{}
+}

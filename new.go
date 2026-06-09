@@ -302,13 +302,9 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 	}
 
-	if l.logPriority {
-		l.task.cache <- ml
-	} else {
-		select {
-		case l.task.cache <- ml:
-		default:
-		}
+	select {
+	case l.task.cache <- ml:
+	default:
 	}
 
 	// ml.control()

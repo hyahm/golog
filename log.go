@@ -303,13 +303,9 @@ func s(level Level, msg string, deep ...int) {
 
 	// // ml.control()
 
-	if _logPriority {
-		t.cache <- ml
-	} else {
-		select {
-		case t.cache <- ml:
-		default:
-		}
+	select {
+	case t.cache <- ml:
+	default:
 	}
 
 	// ml = nil

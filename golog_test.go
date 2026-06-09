@@ -16,11 +16,13 @@ func TestInitLogger(t *testing.T) {
 	SetFormatFunc(JsonFormat)
 	SetExpireDuration(time.Second * 10)
 	// time.Sleep(10 * time.Second)
-	l := NewLog("", 0, true)
-	// l2 := NewLog("", 0, true)
+	l := NewLog("aaa.log", 0, true)
+
 	defer l.Sync()
+	l2 := NewLog("aaa.log", 0, true)
+	defer l2.Sync()
 	l.Infof("Asdfasdf%d", 10)
-	// defer l2.Sync()
+
 	// ShowBasePath = true
 	// l2.SetLogPriority(true, 100, time.Minute)
 	// WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {

@@ -110,7 +110,6 @@ func SetExpireDuration(d time.Duration) {
 func Sync() {
 	// 等待所有通道写完日志写完,  可以不写，
 	// time.Sleep(1 * time.Millisecond * 300)
-
 	t.wg.Wait()
 	close(t.cache)
 	<-t.exit
@@ -120,6 +119,7 @@ func Sync() {
 func (l *Log) Sync() {
 	// 等待所有通道写完日志写完,  可以不写，
 	// time.Sleep(1 * time.Millisecond * 300)
+	checkName(l.Name)
 	l.task.wg.Wait()
 	close(l.task.cache)
 	<-l.task.exit
