@@ -15,8 +15,7 @@ import (
 var ShowBasePath bool
 
 type Log struct {
-	Create time.Time
-	// Label             map[string]string
+	Create      time.Time
 	Deep        int
 	Color       []color.Attribute
 	Mu          *sync.RWMutex
@@ -27,13 +26,13 @@ type Log struct {
 	EveryDay    bool
 	Name        string
 	Expire      int
-	Format      func(ctime time.Time, hostname, line, msg string, label map[string]string) string
+	Format      func(ctime time.Time, hostname, line, msg string) string
 	cancel      context.CancelFunc
 	level       Level
 	task        *task
 	logPriority bool
 	duplicates  *duplicate
-	LogHandler  func(level Level, ctime time.Time, line, msg string, label map[string]string)
+	LogHandler  func(level Level, ctime time.Time, line, msg string)
 }
 
 // 递归遍历文件夹
@@ -120,20 +119,20 @@ func NewLog(name string, size int64, everyday bool) *Log {
 	return l
 }
 
-func (l *Log) SetLogHandler(eh func(Level, time.Time, string, string, map[string]string)) {
+func (l *Log) SetLogHandler(eh func(Level, time.Time, string, string)) {
 	l.LogHandler = eh
 }
 
 // 关闭log
-func (l *Log) Close() {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-	l.cancel()
-	l = nil
-}
+// func (l *Log) Close() {
+// 	defer func() {
+// 		if err := recover(); err != nil {
+// 			fmt.Println(err)
+// 		}
+// 	}()
+// 	l.cancel()
+// 	l = nil
+// }
 
 // func (l *Log) SetLabel(key, value string) *Log {
 // 	l.Mu.Lock()
@@ -298,8 +297,8 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		}
 	}
 
-	if LogHandler != nil {
-		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+	if l.LogHandler != nil {
+		go l.LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 	}
 
 	select {

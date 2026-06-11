@@ -71,8 +71,9 @@ func (t *task) write() {
 			}
 
 			if cl.day != 0 && c.Ctime.Day() != cl.day {
-				t.control(c)
-				continue
+				t.control(cl)
+				cl.Msg = ""
+				cl.day = 0
 			}
 			cl.dir = c.dir
 			cl.out = c.out

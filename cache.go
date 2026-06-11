@@ -1,7 +1,6 @@
 package golog
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -40,7 +39,6 @@ func init() {
 }
 
 func checkName(name string) bool {
-	fmt.Println(name)
 	if name == "" || name == "." {
 		return true
 	}

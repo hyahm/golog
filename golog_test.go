@@ -12,6 +12,7 @@ func TestInitLogger(t *testing.T) {
 	// InitLogger("aa.log", 10, false)
 	// SetExpireDuration(time.Second * 5)
 	SetLevel(DEBUG)
+
 	SetLogPriority(true, 100, time.Minute)
 	SetFormatFunc(JsonFormat)
 	SetExpireDuration(time.Second * 10)
