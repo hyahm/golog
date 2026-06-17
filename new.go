@@ -32,7 +32,6 @@ type Log struct {
 	task        *task
 	logPriority bool
 	duplicates  *duplicate
-	LogHandler  func(level Level, ctime time.Time, line, msg string)
 }
 
 // 递归遍历文件夹
@@ -118,10 +117,6 @@ func NewLog(name string, size int64, everyday bool) *Log {
 	go l.task.write()
 	addClean(_name)
 	return l
-}
-
-func (l *Log) SetLogHandler(eh func(Level, time.Time, string, string)) {
-	l.LogHandler = eh
 }
 
 // 关闭log
@@ -298,9 +293,9 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		}
 	}
 
-	if l.LogHandler != nil {
+	if LogHandler != nil {
 		t.handlerWg.Go(func() {
-			l.LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+			LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
 		})
 	}
 
