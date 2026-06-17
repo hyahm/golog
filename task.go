@@ -6,18 +6,20 @@ import (
 )
 
 type task struct {
-	cache chan msgLog
-	exit  chan struct{}
-	wg    *sync.WaitGroup
+	cache     chan msgLog
+	exit      chan struct{}
+	wg        *sync.WaitGroup
+	handlerWg *sync.WaitGroup
 }
 
 var t *task
 
 func init() {
 	t = &task{
-		cache: make(chan msgLog, 1000),
-		exit:  make(chan struct{}),
-		wg:    &sync.WaitGroup{},
+		cache:     make(chan msgLog, 1000),
+		exit:      make(chan struct{}),
+		wg:        &sync.WaitGroup{},
+		handlerWg: &sync.WaitGroup{},
 	}
 	// exit = make(chan bool)
 	// 增加1024字节的缓存， 也就是假设每一条日志的最大长度是1024
@@ -111,6 +113,7 @@ func SetExpireDuration(d time.Duration) {
 func Sync() {
 	// 等待所有通道写完日志写完,  可以不写，
 	// time.Sleep(1 * time.Millisecond * 300)
+	t.handlerWg.Wait()
 	t.wg.Wait()
 	close(t.cache)
 	<-t.exit
@@ -123,6 +126,7 @@ func (l *Log) Sync() {
 	if !checkName(l.Name) {
 		return
 	}
+	l.task.handlerWg.Wait()
 	l.task.wg.Wait()
 	close(l.task.cache)
 	<-l.task.exit

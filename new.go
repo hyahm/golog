@@ -109,9 +109,10 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		Name:     name,
 		level:    _level,
 		task: &task{
-			cache: make(chan msgLog, 1000),
-			exit:  make(chan struct{}),
-			wg:    &sync.WaitGroup{},
+			cache:     make(chan msgLog, 1000),
+			exit:      make(chan struct{}),
+			wg:        &sync.WaitGroup{},
+			handlerWg: &sync.WaitGroup{},
 		},
 	}
 	go l.task.write()
@@ -298,7 +299,9 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 	}
 
 	if l.LogHandler != nil {
-		go l.LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+		t.handlerWg.Go(func() {
+			l.LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+		})
 	}
 
 	select {

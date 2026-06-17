@@ -289,7 +289,9 @@ func s(level Level, msg string, deep ...int) {
 		}
 	}
 	if LogHandler != nil {
-		go LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+		t.handlerWg.Go(func() {
+			LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+		})
 	}
 	// if ml.out {
 	// 	// 控制台才添加颜色， 否则不添加颜色
