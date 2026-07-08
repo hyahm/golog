@@ -48,5 +48,5 @@ func checkName(name string) bool {
 		return false
 	}
 	cn.name[name] = true
-	return false
+	return true
 }

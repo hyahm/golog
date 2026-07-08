@@ -123,9 +123,9 @@ func Sync() {
 func (l *Log) Sync() {
 	// 等待所有通道写完日志写完,  可以不写，
 	// time.Sleep(1 * time.Millisecond * 300)
-	if !checkName(l.Name) {
-		return
-	}
+	// if !checkName(l.Name) {
+	// 	return
+	// }
 	l.task.handlerWg.Wait()
 	l.task.wg.Wait()
 	close(l.task.cache)
