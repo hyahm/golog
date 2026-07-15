@@ -100,7 +100,7 @@ func (t *task) write() {
 
 }
 
-var _expireClean time.Duration = time.Hour * 24 * 365
+var _expireClean time.Duration = time.Hour * 24 * 7
 
 // 设置清理时间 默认365天
 func SetExpireDuration(d time.Duration) {

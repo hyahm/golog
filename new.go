@@ -41,22 +41,25 @@ func walkDir() error {
 	for k := range names {
 		name = append(name, k)
 	}
+
 	return filepath.Walk(_dir, func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		// 如果是文件，打印文件路径和修改时间
-		if !info.IsDir() && containsSlice(info.Name(), name) {
-			modTime := info.ModTime()
-			if time.Since(modTime) > _expireClean {
-				os.Remove(fp)
+		if !info.IsDir() && containsSlice(name, info.Name()) {
+			if time.Since(info.ModTime()) > _expireClean {
+				err = os.Remove(fp)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 		return nil
 	})
 }
 
-func containsSlice(str string, ss []string) bool {
+func containsSlice(ss []string, str string) bool {
 	for _, v := range ss {
 		if strings.Contains(str, v) {
 			return true
@@ -86,7 +89,7 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		if err == nil && !fi.IsDir() {
 			// 如果存在这个文件， 直接跳过
 			fmt.Printf("%s is not a directory, will input log to the console \n", _dir)
-			_name = ""
+			name = ""
 		}
 		if err != nil {
 			// 目录不存在就创建
@@ -115,7 +118,7 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		},
 	}
 	go l.task.write()
-	addClean(_name)
+	addClean(name)
 	return l
 }
 
