@@ -21,8 +21,6 @@ func addClean(names ...string) {
 		_names[v] = struct{}{}
 	}
 	once.Do(func() {
-		// 预热3秒，等待
-		time.Sleep(time.Second * 3)
 		go clean()
 	})
 }
