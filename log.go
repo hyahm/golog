@@ -2,6 +2,7 @@ package golog
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +33,6 @@ func SetDir(dir string) {
 	_dir = filepath.Clean(dir)
 	err := os.MkdirAll(_dir, 0755)
 	if err != nil {
-		fmt.Println(err)
 		_dir = "."
 	}
 }
@@ -59,14 +59,14 @@ func InitLogger(name string, size int64, everyday bool) {
 		fi, err := os.Stat(_dir)
 		if err == nil && !fi.IsDir() {
 			// 如果存在这个文件， 直接跳过
-			fmt.Printf("%s is not a directory, will input log to the console \n", _dir)
+			log.Printf("%s is not a directory, will input log to the console \n", _dir)
 			_name = ""
 			return
 		}
 		if err != nil {
 			// 目录不存在就创建
 			if err = os.MkdirAll(_dir, 0755); err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 

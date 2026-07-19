@@ -3,6 +3,7 @@ package golog
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +52,7 @@ func walkDir() error {
 			if time.Since(info.ModTime()) > _expireClean {
 				err = os.Remove(fp)
 				if err != nil {
-					fmt.Println(err)
+					log.Println(err)
 				}
 			}
 		}
@@ -88,13 +89,13 @@ func NewLog(name string, size int64, everyday bool) *Log {
 		fi, err := os.Stat(_dir)
 		if err == nil && !fi.IsDir() {
 			// 如果存在这个文件， 直接跳过
-			fmt.Printf("%s is not a directory, will input log to the console \n", _dir)
+			log.Printf("%s is not a directory, will input log to the console \n", _dir)
 			name = ""
 		}
 		if err != nil {
 			// 目录不存在就创建
 			if err = os.MkdirAll(_dir, 0755); err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				name = ""
 			}
 

@@ -111,21 +111,21 @@ func (task *task) control(cl msgLog) {
 	if cl.size > 0 {
 		f, err := os.OpenFile(filepath.Join(cl.dir, cl.name), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		defer f.Close()
 		// 如果大于设定值， 那么
 		fi, err := f.Stat()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		if fi.Size() >= (cl.size-1)*1<<20-BLOCKSIZE {
 
 			_, err := f.WriteString(cl.Msg)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 			f.Close()
