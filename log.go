@@ -1,6 +1,7 @@
 package golog
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -225,11 +226,34 @@ func Wrap(err error) error {
 	if err == nil {
 		return nil
 	}
-	return fmt.Errorf("%s -- %w", printFileline(-1), err)
+	return &gologError{fileline: printFileline(-1), err: err}
 }
 func Wraps(err string) error {
 	// error日志，添加了错误函数，
-	return fmt.Errorf("%s -- %s", printFileline(-1), err)
+	return &gologError{fileline: printFileline(-1), err: errors.New(err)}
+}
+
+// Unwrap 返回 Wrap/Wraps 包装的原始 error，无法解包时返回 nil。
+func Unwrap(err error) error {
+	if e, ok := err.(*gologError); ok {
+		return e.err
+	}
+	return nil
+}
+
+// gologError 记录错误产生的文件行号及原始错误信息，方便通过 Unwrap 还原。
+type gologError struct {
+	fileline string
+	err      error
+}
+
+func (e *gologError) Error() string {
+	return fmt.Sprintf("%s -- %s", e.fileline, e.err)
+}
+
+// Unwrap 实现标准库 errors 的解包接口，支持 errors.Is/errors.As。
+func (e *gologError) Unwrap() error {
+	return e.err
 }
 
 func UpFunc(deep int, msg ...interface{}) {

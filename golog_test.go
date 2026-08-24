@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 )
 
 func TestInitLogger(t *testing.T) {
@@ -12,18 +11,15 @@ func TestInitLogger(t *testing.T) {
 	// InitLogger("aa.log", 10, false)
 	// SetExpireDuration(time.Second * 5)
 	SetLevel(DEBUG)
+	s := a()
 
-	SetLogPriority(true, 100, time.Minute)
-	SetFormatFunc(JsonFormat)
-	SetExpireDuration(time.Second * 10)
+	Info(s)
+
+	m := Unwrap(s)
+
+	Info(m)
+
 	// time.Sleep(10 * time.Second)
-	l := NewLog("aaa.log", 0, true)
-
-	defer l.Sync()
-	l2 := NewLog("aaa.log", 0, true)
-	defer l2.Sync()
-	l.Infof("Asdfasdf%d", 10)
-
 	// ShowBasePath = true
 	// l2.SetLogPriority(true, 100, time.Minute)
 	// WarnHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
@@ -32,9 +28,7 @@ func TestInitLogger(t *testing.T) {
 	// ErrorHandler = func(ctime time.Time, hostname, line, msg string, label map[string]string) {
 	// 	fmt.Println(msg)
 	// }
-	for range 101 {
-		Infof("消息%s", "asdfasdf")
-	}
+
 	fmt.Println(Wrap(a()))
 
 	// time.Sleep(1 * time.Second)
@@ -51,5 +45,27 @@ func TestInitLogger(t *testing.T) {
 }
 
 func a() error {
-	return errors.New("aaaaa")
+	return Wrap(errors.New("aaaaa"))
+}
+
+func TestWrapUnwrap(t *testing.T) {
+	origin := errors.New("origin")
+	w := Wrap(origin)
+	if !errors.Is(w, origin) {
+		t.Fatalf("Wrap should preserve errors.Is: %v", w)
+	}
+	if Unwrap(w) != origin {
+		t.Fatalf("Unwrap(Wrap(err)) should return origin, got %v", Unwrap(w))
+	}
+	if Unwrap(errors.New("other")) != nil {
+		t.Fatalf("Unwrap should return nil for non-golog error")
+	}
+
+	ws := Wraps("boom")
+	if ws.(*gologError).err.Error() != "boom" {
+		t.Fatalf("Wraps should hold string error, got %v", ws)
+	}
+	if Unwrap(ws) == nil {
+		t.Fatalf("Unwrap(Wraps(str)) should return the string error")
+	}
 }
