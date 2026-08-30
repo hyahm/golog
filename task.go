@@ -10,6 +10,9 @@ type task struct {
 	exit      chan struct{}
 	wg        *sync.WaitGroup
 	handlerWg *sync.WaitGroup
+
+	mu     sync.Mutex
+	closed bool
 }
 
 var t *task
@@ -102,6 +105,29 @@ func (t *task) write() {
 
 var _expireClean time.Duration = time.Hour * 24 * 7
 
+// send 在通道未关闭时非阻塞写入日志，通道已关闭则直接丢弃，避免向已关闭通道发送导致 panic
+func (t *task) send(ml msgLog) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.closed {
+		return
+	}
+	select {
+	case t.cache <- ml:
+	default:
+	}
+}
+
+// closeCache 标记通道关闭并关闭 cache，保证与 send 互斥，防止重复 close
+func (t *task) closeCache() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.closed {
+		t.closed = true
+		close(t.cache)
+	}
+}
+
 // 设置清理时间 默认365天
 func SetExpireDuration(d time.Duration) {
 	if d > 0 {
@@ -115,7 +141,7 @@ func Sync() {
 	// time.Sleep(1 * time.Millisecond * 300)
 	t.handlerWg.Wait()
 	t.wg.Wait()
-	close(t.cache)
+	t.closeCache()
 	<-t.exit
 
 }
@@ -128,7 +154,7 @@ func (l *Log) Sync() {
 	// }
 	l.task.handlerWg.Wait()
 	l.task.wg.Wait()
-	close(l.task.cache)
+	l.task.closeCache()
 	<-l.task.exit
 
 }

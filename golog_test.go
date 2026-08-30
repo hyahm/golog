@@ -7,7 +7,7 @@ import (
 )
 
 func TestInitLogger(t *testing.T) {
-	defer Sync()
+
 	// InitLogger("aa.log", 10, false)
 	// SetExpireDuration(time.Second * 5)
 	SetLevel(DEBUG)
@@ -18,7 +18,8 @@ func TestInitLogger(t *testing.T) {
 	m := Unwrap(s)
 
 	Info(m)
-
+	Warn(1111)
+	Sync()
 	// time.Sleep(10 * time.Second)
 	// ShowBasePath = true
 	// l2.SetLogPriority(true, 100, time.Minute)
@@ -30,7 +31,7 @@ func TestInitLogger(t *testing.T) {
 	// }
 
 	fmt.Println(Wrap(a()))
-
+	Warn(2222)
 	// time.Sleep(1 * time.Second)
 	// golog.InitLogger("log/a.log", 1024, false, 10)
 	// a := NewLog("log/a.log", 1024, true, 10)
@@ -45,7 +46,7 @@ func TestInitLogger(t *testing.T) {
 }
 
 func a() error {
-	return Wrap(errors.New("aaaaa"))
+	return Wrap(errors.New("我是打印的"))
 }
 
 func TestWrapUnwrap(t *testing.T) {

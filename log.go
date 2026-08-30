@@ -329,10 +329,7 @@ func s(level Level, msg string, deep ...int) {
 
 	// // ml.control()
 
-	select {
-	case t.cache <- ml:
-	default:
-	}
+	t.send(ml)
 
 	// ml = nil
 	// ml.reset()

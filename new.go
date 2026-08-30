@@ -303,11 +303,6 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 		})
 	}
 
-	select {
-	case l.task.cache <- ml:
-	default:
-	}
-
-	// ml.control()
+	l.task.send(ml)
 
 }
