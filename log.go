@@ -237,8 +237,9 @@ func Wraps(err string) error {
 func Unwrap(err error) error {
 	if e, ok := err.(*gologError); ok {
 		return e.err
+	} else {
+		return err
 	}
-	return nil
 }
 
 // gologError 记录错误产生的文件行号及原始错误信息，方便通过 Unwrap 还原。
