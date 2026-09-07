@@ -16,18 +16,18 @@ import (
 var ShowBasePath bool
 
 type Log struct {
-	Create      time.Time
-	Deep        int
-	Color       []color.Attribute
-	Mu          *sync.RWMutex
-	Line        string
-	Out         bool
-	Dir         string
-	Size        int64
-	EveryDay    bool
-	Name        string
-	Expire      int
-	Format      func(ctime time.Time, hostname, line, msg string) string
+	create      time.Time
+	deep        int
+	color       []color.Attribute
+	mu          *sync.RWMutex
+	line        string
+	out         bool
+	dir         string
+	size        int64
+	everyDay    bool
+	name        string
+	expire      int
+	format      func(ctime time.Time, hostname, line, msg string) string
 	cancel      context.CancelFunc
 	level       Level
 	task        *task
@@ -105,11 +105,11 @@ func NewLog(name string, size int64, everyday bool) *Log {
 	name = filepath.Base(name)
 	l := &Log{
 		// Label:    make(map[string]string),
-		Mu:       &sync.RWMutex{},
-		Size:     size,
-		Dir:      _dir,
-		EveryDay: everyday,
-		Name:     name,
+		mu:       &sync.RWMutex{},
+		size:     size,
+		dir:      _dir,
+		everyDay: everyday,
+		name:     name,
 		level:    _level,
 		task: &task{
 			cache:     make(chan msgLog, 1000),
@@ -272,18 +272,18 @@ func (l *Log) s(level Level, msg string, deep ...int) {
 	ml := msgLog{}
 	ml.Msg = msg
 	ml.Level = level
-	ml.out = l.Name == "." || l.Name == ""
-	ml.dir = l.Dir
+	ml.out = l.name == "." || l.name == ""
+	ml.dir = l.dir
 	ml.Ctime = time.Now()
-	ml.name = l.Name
-	ml.size = l.Size
+	ml.name = l.name
+	ml.size = l.size
 	if _formatFunc == nil {
 		ml.format = defaultFormat
 	} else {
 		ml.format = _formatFunc
 	}
 
-	ml.everyDay = l.EveryDay
+	ml.everyDay = l.everyDay
 
 	if ShowBasePath {
 		ml.Line = printBaseFileline(0)
