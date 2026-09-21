@@ -1,52 +1,26 @@
 package golog
 
 import (
-	"sync"
 	"time"
 
 	"github.com/fatih/color"
 )
 
+// msgLog 单条日志在异步通道与写线程之间传递的内部载体。
 type msgLog struct {
-	// Prev    string    // 深度对于的路径
-	Msg   string // 日志信息
-	Level Level  // 日志级别
-	Ctime time.Time
-	// deep     int               // 向外的深度，  Upfunc 才会用到
-	Color    []color.Attribute // 颜色
-	Line     string            // 行号
-	out      bool              // 文件还是控制台
+	Msg      string // 已格式化的日志文本（进入写线程前为原始消息）
+	Level    Level
+	Ctime    time.Time
+	Color    []color.Attribute // 控制台颜色
+	Line     string            // 调用位置
+	fields   []Field           // 结构化字段
+	format   FormatFunc        // 格式化函数
+	out      bool              // true 输出控制台，false 写文件
+	console  bool              // 写文件时是否同时输出控制台
+	compress bool              // 切割归档后是否 gzip 压缩
 	dir      string
 	name     string
-	size     int64 // 默认单位M
-	everyDay bool
-	format   func(level Level, ctime time.Time, line, msg string) string
-	day      int
-}
-
-type cacheName struct {
-	name map[string]bool
-	mu   sync.RWMutex
-}
-
-var cn *cacheName
-
-func init() {
-	cn = &cacheName{
-		name: make(map[string]bool),
-		mu:   sync.RWMutex{},
-	}
-}
-
-func checkName(name string) bool {
-	if name == "" || name == "." {
-		return true
-	}
-	cn.mu.Lock()
-	defer cn.mu.Unlock()
-	if _, ok := cn.name[name]; ok {
-		return false
-	}
-	cn.name[name] = true
-	return true
+	size     int64 // 按大小切割阈值(MB)
+	everyDay bool  // 按天切割
+	day      int   // 批量缓冲里最后一条日志的日期（天），用于跨天切割
 }

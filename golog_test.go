@@ -19,7 +19,7 @@ func TestInitLogger(t *testing.T) {
 
 	Info(m)
 	Warn(1111)
-	Sync()
+	defer Sync()
 	// time.Sleep(10 * time.Second)
 	// ShowBasePath = true
 	// l2.SetLogPriority(true, 100, time.Minute)

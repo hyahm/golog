@@ -1,59 +1,43 @@
+// Package golog 是一个异步、简单易用的日志库，全程无需关闭操作，开箱即用。
+//
+// 常用全局方法：Info/Infof/Infow、Error 等；写文件调用 InitLogger；
+// 程序退出前 defer Sync() 可避免日志丢失。
+// 需要独立输出目标时使用 NewLog 创建实例，实例停止服务时调用其 Sync。
 package golog
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
-var (
-	// _logPath   string // 文件路径
-	_fileSize int64   // 切割的文件大小默认单位M
-	_everyDay bool    // 每天一个来切割文件 （这个比上面个优先级高）
-	_dir      = "log" // 文件目录
-	_name     string
-	// label             = make(map[string]string)
-	// labelLock         = sync.RWMutex{}
-	_logPriority bool
-)
+// _dir 全局日志目录。
+var _dir = "log"
 
-var once = sync.Once{}
-
+// LogHandler 日志回调：每条日志写入前异步调用，可用于报警等二次处理。
+// 应在首次打印日志前设置，运行中修改存在数据竞争风险。
 var LogHandler func(level Level, ctime time.Time, line, msg string)
 
-// var Format string = "{{ .Ctime }} - [{{ .Level }}]{{ if .Label }} - {{ range $k,$v := .Label}}[{{$k}}:{{$v}}]{{end}}{{end}} - {{.Hostname}} - {{.Line}} - {{.Msg}}"
+// exitFunc 退出函数，测试中可替换以避免 os.Exit 终止测试进程。
+var exitFunc = os.Exit
 
-// var cancel context.CancelFunc
-
+// SetDir 设置全局日志目录并创建（影响全局实例与后续 NewLog 创建的实例）。
 func SetDir(dir string) {
 	_dir = filepath.Clean(dir)
-	err := os.MkdirAll(_dir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(_dir, 0755); err != nil {
 		_dir = "."
 	}
+	getDefaultLog().setDir(_dir)
 }
 
-// 默认false  也就是日志优先,  类似 zap 开发模式， 打印所有日志， 设置true 的话， 类似 zap 生成模式，
-// 后面的duplicates 是重复多少条值打印一条,   如果小于等于0 相当于logPriority 为false
-func SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
-	_logPriority = logPriority
-	if _logPriority && duplicates > 0 {
-		cleanDuplicate := time.Minute
-		if len(dd) > 0 {
-			cleanDuplicate = dd[0]
-		}
-		duplicateVal = newDuplicate(duplicates, cleanDuplicate)
-		return
-	}
-	_logPriority = false
-}
-
-// name : filename, size: mb,
+// InitLogger 初始化全局日志写入文件。
+// name: 日志文件名；size: 按大小切割阈值(MB)，0 不按大小切割；
+// everyday: 是否按天切割（size > 0 时按大小切割优先）。
 func InitLogger(name string, size int64, everyday bool) {
 	// 如果要写入文件
 	if name != "" {
@@ -61,209 +45,124 @@ func InitLogger(name string, size int64, everyday bool) {
 		if err == nil && !fi.IsDir() {
 			// 如果存在这个文件， 直接跳过
 			log.Printf("%s is not a directory, will input log to the console \n", _dir)
-			_name = ""
-			return
-		}
-		if err != nil {
+			name = ""
+		} else if err != nil {
 			// 目录不存在就创建
 			if err = os.MkdirAll(_dir, 0755); err != nil {
 				log.Println(err)
 				return
 			}
-
 		}
-
 	}
-
-	_name = filepath.Base(name)
-	_fileSize = size
-	_everyDay = everyday
-	addClean(_name)
-	// once.Do(func() {
-	// 	var ctx context.Context
-	// 	if _dir != "." && name != "" && _expire > 0 && (size > 0 || everyday) {
-	// 		ctx, cancel = context.WithCancel(context.Background())
-	// 		go clean(ctx, _dir, _name, time.Duration(_expire)*defaultUnit)
-	// 	}
-	// })
-
+	getDefaultLog().initFile(filepath.Base(name), size, everyday)
+	addClean(filepath.Base(name))
 }
 
-// 清理日志， 请在写入文件初始化后调用即可， 已经是异步处理
-// func Clean(names ...string) {
-// 	if len(names) == 0 {
-// 		return
-// 	}
-// 	once.Do(func() {
-// 		go clean(_dir, _expireClean, names...)
-// 	})
-// }
-
-// func AddLabel(key, value string) {
-// 	labelLock.RLock()
-// 	defer labelLock.RUnlock()
-// 	label[key] = value
-// }
-
-// func SetLabel(key, value string) {
-// 	labelLock.RLock()
-// 	defer labelLock.RUnlock()
-// 	label[key] = value
-// }
-
-// func DelLabel(key string) {
-// 	labelLock.Lock()
-// 	defer labelLock.Unlock()
-// 	delete(label, key)
-// }
-
-// func GetLabel() map[string]string {
-// 	labelLock.RLock()
-// 	defer labelLock.RUnlock()
-// 	return label
-// }
-
-// open file，  所有日志默认前面加了时间，
-func Tracef(format string, args ...interface{}) {
-	if _level <= TRACE {
-		s(TRACE, fmt.Sprintf(format, args...))
-	}
+// SetConsole 设置全局写文件时是否同时输出到控制台，默认 false。
+func SetConsole(b bool) {
+	getDefaultLog().SetConsole(b)
 }
 
-// open file，  所有日志默认前面加了时间，
-func Debugf(format string, args ...interface{}) {
-	if _level <= DEBUG {
-		s(DEBUG, fmt.Sprintf(format, args...))
-	}
+// SetCompress 设置全局归档旧日志是否异步 gzip 压缩，默认 false。
+func SetCompress(b bool) {
+	getDefaultLog().SetCompress(b)
 }
 
-// open file，  所有日志默认前面加了时间，
-func Infof(format string, args ...interface{}) {
-	if _level <= INFO {
-		s(INFO, fmt.Sprintf(format, args...))
-	}
+// SetRateLimit 开启全局限流采样：每个 window 窗口内最多记录 max 条日志。
+// max <= 0 时关闭限流。
+func SetRateLimit(max int, window time.Duration) {
+	getDefaultLog().SetRateLimit(max, window)
 }
 
-// 可以根据下面格式一样，在format 后加上更详细的输出值
-func Warnf(format string, args ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= WARN {
-		s(WARN, fmt.Sprintf(format, args...))
-	}
+// SetOutput 设置全局控制台输出目标（默认 os.Stdout），
+// 用于测试捕获日志或对接自定义 Writer。
+func SetOutput(w io.Writer) {
+	t.cw.SetOutput(w)
 }
 
-// 可以根据下面格式一样，在format 后加上更详细的输出值
-func Errorf(format string, args ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= ERROR {
-		s(ERROR, fmt.Sprintf(format, args...))
-	}
+// SetLogPriority 设置全局重复日志采样（参见 (*Log).SetLogPriority）。
+func SetLogPriority(logPriority bool, duplicates int, dd ...time.Duration) {
+	getDefaultLog().SetLogPriority(logPriority, duplicates, dd...)
 }
 
-func Fatalf(format string, args ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= FATAL {
-		s(FATAL, fmt.Sprintf(format, args...))
-	}
+// Trace 打印 TRACE 级别日志（全局）。
+func Trace(msg ...any) { getDefaultLog().Trace(msg...) }
+
+// Tracef 打印 TRACE 级别格式化日志（全局）。
+func Tracef(format string, args ...any) { getDefaultLog().Tracef(format, args...) }
+
+// Tracew 打印 TRACE 级别日志并附加结构化字段（全局）。
+func Tracew(msg string, fields ...Field) { getDefaultLog().Tracew(msg, fields...) }
+
+// Debug 打印 DEBUG 级别日志（全局）。
+func Debug(msg ...any) { getDefaultLog().Debug(msg...) }
+
+// Debugf 打印 DEBUG 级别格式化日志（全局）。
+func Debugf(format string, args ...any) { getDefaultLog().Debugf(format, args...) }
+
+// Debugw 打印 DEBUG 级别日志并附加结构化字段（全局）。
+func Debugw(msg string, fields ...Field) { getDefaultLog().Debugw(msg, fields...) }
+
+// Info 打印 INFO 级别日志（全局）。
+func Info(msg ...any) { getDefaultLog().Info(msg...) }
+
+// Infof 打印 INFO 级别格式化日志（全局）。
+func Infof(format string, args ...any) { getDefaultLog().Infof(format, args...) }
+
+// Infow 打印 INFO 级别日志并附加结构化字段（全局）。
+func Infow(msg string, fields ...Field) { getDefaultLog().Infow(msg, fields...) }
+
+// Warn 打印 WARN 级别日志（全局）。
+func Warn(msg ...any) { getDefaultLog().Warn(msg...) }
+
+// Warnf 打印 WARN 级别格式化日志（全局）。
+func Warnf(format string, args ...any) { getDefaultLog().Warnf(format, args...) }
+
+// Warnw 打印 WARN 级别日志并附加结构化字段（全局）。
+func Warnw(msg string, fields ...Field) { getDefaultLog().Warnw(msg, fields...) }
+
+// Error 打印 ERROR 级别日志（全局）。
+func Error(msg ...any) { getDefaultLog().Error(msg...) }
+
+// Errorf 打印 ERROR 级别格式化日志（全局）。
+func Errorf(format string, args ...any) { getDefaultLog().Errorf(format, args...) }
+
+// Errorw 打印 ERROR 级别日志并附加结构化字段（全局）。
+func Errorw(msg string, fields ...Field) { getDefaultLog().Errorw(msg, fields...) }
+
+// Fatal 同步写入 FATAL 级别日志（保证落盘）并以退出码 1 结束进程。
+func Fatal(msg ...any) { getDefaultLog().Fatal(msg...) }
+
+// Fatalf 同步写入 FATAL 级别格式化日志并结束进程。
+func Fatalf(format string, args ...any) { getDefaultLog().Fatalf(format, args...) }
+
+// Fatalw 同步写入 FATAL 级别日志（含结构化字段）并结束进程。
+func Fatalw(msg string, fields ...Field) { getDefaultLog().Fatalw(msg, fields...) }
+
+// Panic 同步写入 PANIC 级别日志（保证落盘）后 panic。
+func Panic(msg ...any) { getDefaultLog().Panic(msg...) }
+
+// Panicf 同步写入 PANIC 级别格式化日志后 panic。
+func Panicf(format string, args ...any) { getDefaultLog().Panicf(format, args...) }
+
+// Stack 打印 ERROR 级别日志并附带当前 goroutine 调用堆栈（全局）。
+func Stack(msg ...any) { getDefaultLog().Stack(msg...) }
+
+// UpFunc 打印 DEBUG 级别日志并标注调用者的调用位置（全局）。
+func UpFunc(deep int, msg ...any) { getDefaultLog().UpFunc(deep, msg...) }
+
+// UpFuncf 打印 DEBUG 级别格式化日志并标注调用者的调用位置（全局）。
+func UpFuncf(deep int, format string, args ...any) {
+	getDefaultLog().UpFuncf(deep, format, args...)
 }
 
-func UpFuncf(deep int, format string, args ...interface{}) {
-	// deep打印函数的深度， 相对于当前位置向外的深度
-	if _level <= DEBUG {
-		s(DEBUG, fmt.Sprintf(format, args...), deep)
-	}
-}
+// With 返回携带新增结构化字段的全局子 logger。
+func With(fields ...Field) *Log { return getDefaultLog().With(fields...) }
 
-// open file，  所有日志默认前面加了时间，
-func Trace(msg ...interface{}) {
-	// Access,
-	if _level <= TRACE {
-		s(TRACE, arrToString(msg...))
-	}
-}
+// Named 返回带模块名的全局子 logger。
+func Named(name string) *Log { return getDefaultLog().Named(name) }
 
-// open file，  所有日志默认前面加了时间，
-func Debug(msg ...interface{}) {
-	// debug,
-	if _level <= DEBUG {
-		s(DEBUG, arrToString(msg...))
-	}
-}
-
-// open file，  所有日志默认前面加了时间，
-func Info(msg ...interface{}) {
-	if _level <= INFO {
-		s(INFO, arrToString(msg...))
-	}
-}
-
-// 可以根据下面格式一样，在format 后加上更详细的输出值
-func Warn(msg ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= WARN {
-		s(WARN, arrToString(msg...))
-	}
-}
-
-// 可以根据下面格式一样，在format 后加上更详细的输出值
-func Error(msg ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= ERROR {
-		s(ERROR, arrToString(msg...))
-	}
-}
-
-func Fatal(msg ...interface{}) {
-	// error日志，添加了错误函数，
-	if _level <= FATAL {
-		s(FATAL, arrToString(msg...))
-	}
-	os.Exit(1)
-}
-
-func Wrap(err error) error {
-	// error日志，添加了错误函数，
-	if err == nil {
-		return nil
-	}
-	return &gologError{fileline: printFileline(-1), err: err}
-}
-func Wraps(err string) error {
-	// error日志，添加了错误函数，
-	return &gologError{fileline: printFileline(-1), err: errors.New(err)}
-}
-
-// Unwrap 返回 Wrap/Wraps 包装的原始 error，无法解包时返回 nil。
-func Unwrap(err error) error {
-	if e, ok := err.(*gologError); ok {
-		return e.err
-	} else {
-		return err
-	}
-}
-
-// gologError 记录错误产生的文件行号及原始错误信息，方便通过 Unwrap 还原。
-type gologError struct {
-	fileline string
-	err      error
-}
-
-func (e *gologError) Error() string {
-	return fmt.Sprintf("%s -- %s", e.fileline, e.err)
-}
-
-// Unwrap 实现标准库 errors 的解包接口，支持 errors.Is/errors.As。
-func (e *gologError) Unwrap() error {
-	return e.err
-}
-
-func UpFunc(deep int, msg ...interface{}) {
-	// deep打印函数的深度， 相对于当前位置向外的深度
-	if _level <= DEBUG {
-		s(DEBUG, arrToString(msg...), deep)
-	}
-}
-
+// arrToString 将多个任意类型参数以空格连接为字符串。
 func arrToString(msg ...interface{}) string {
 	ll := make([]string, 0, len(msg))
 	for _, v := range msg {
@@ -272,82 +171,39 @@ func arrToString(msg ...interface{}) string {
 	return strings.Join(ll, " ")
 }
 
-func s(level Level, msg string, deep ...int) {
-
-	if len(deep) > 0 && deep[0] > 0 {
-		if ShowBasePath {
-			msg = fmt.Sprintf("caller from %s -- %v", printBaseFileline(deep[0]), msg)
-		} else {
-			msg = fmt.Sprintf("caller from %s -- %v", printFileline(deep[0]), msg)
-		}
-
+// Wrap 包装 error 并记录包装处的文件行号，最外层打印时自动追加来源路径。
+func Wrap(err error) error {
+	if err == nil {
+		return nil
 	}
-
-	// atomic.StoreInt64(&lastTime, time.Now().Unix())
-	// 写入缓存, 增加一个4096 是放置打日志导致丢失
-	// ml := GetPool()
-	ml := msgLog{}
-	ml.name = _name
-	ml.out = _name == "." || _name == ""
-	ml.dir = _dir
-	ml.size = _fileSize
-	ml.everyDay = _everyDay
-	if _formatFunc == nil {
-		ml.format = defaultFormat
-	} else {
-		ml.format = _formatFunc
-	}
-
-	ml.Level = level
-	ml.Msg = msg
-	ml.Ctime = time.Now()
-	// ml.Label = GetLabel()
-	if ShowBasePath {
-		ml.Line = printBaseFileline(0)
-	} else {
-		ml.Line = printFileline(0)
-	}
-	if _logPriority {
-		key := ml.Line + ml.Msg
-		if !duplicateVal.addMsg(key) {
-			return
-		}
-	}
-	if LogHandler != nil {
-		t.handlerWg.Go(func() {
-			LogHandler(ml.Level, ml.Ctime, ml.Line, ml.Msg)
-		})
-	}
-	// if ml.out {
-	// 	// 控制台才添加颜色， 否则不添加颜色
-	// 	ml.Color = GetColor(ml.Level)
-	// }
-
-	// logMsg, _ := ml.formatText()
-	// ml.Msg = logMsg.String()
-	// // ml.printLine()
-	// // fmt.Print(ml.Msg)
-
-	// // ml.control()
-
-	t.send(ml)
-
-	// ml = nil
-	// ml.reset()
-	// PutPool(ml)
-
-	// if ml.BufCache.Len() > 1<<20 {
-	// 	fmt.Println("write bytes")
-	// 	ml.BufCache.Write(logMsg.Bytes())
-	// 	ml.Msg = ml.BufCache.String()
-	// 	ml.BufCache.Reset()
-	// 	cache <- ml
-	// } else {
-	// 	ml.BufCache.Write(logMsg.Bytes())
-
-	// }
-
+	return &gologError{fileline: printFileline(-1), err: err}
 }
 
-// 保留上次写入chan 的时间
-// var lastTime int64
+// Wraps 将字符串包装为带来源位置的 error。
+func Wraps(err string) error {
+	return &gologError{fileline: printFileline(-1), err: errors.New(err)}
+}
+
+// Unwrap 返回 Wrap/Wraps 包装的原始 error，无法解包时返回 nil。
+func Unwrap(err error) error {
+	if e, ok := err.(*gologError); ok {
+		return e.err
+	}
+	return nil
+}
+
+// gologError 记录错误产生的文件行号及原始错误信息，方便通过 Unwrap 还原。
+type gologError struct {
+	fileline string
+	err      error
+}
+
+// Error 实现 error 接口，输出格式：来源位置 -- 原始错误。
+func (e *gologError) Error() string {
+	return fmt.Sprintf("%s -- %s", e.fileline, e.err)
+}
+
+// Unwrap 实现标准库 errors 的解包接口，支持 errors.Is/errors.As。
+func (e *gologError) Unwrap() error {
+	return e.err
+}
