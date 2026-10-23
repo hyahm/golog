@@ -45,16 +45,63 @@ func SetUTC(b bool) {
 	_utc.Store(b)
 }
 
-// formatTime 按 layout/UTC 配置渲染时间。
+// formatTime 按 layout/UTC 配置渲染时间，默认布局走手写快速路径。
 func formatTime(t time.Time) string {
 	if _utc.Load() {
 		t = t.UTC()
 	}
 	layout, ok := _timeLayout.Load().(string)
-	if !ok || layout == "" {
-		layout = "2006-01-02 15:04:05.000"
+	if !ok || layout == "" || layout == "2006-01-02 15:04:05.000" {
+		return fastFormatTime(t, true)
+	}
+	if layout == "2006-01-02 15:04:05" {
+		return fastFormatTime(t, false)
 	}
 	return t.Format(layout)
+}
+
+// DefaultTimeLayout 默认时间布局常量。
+const DefaultTimeLayout = "2006-01-02 15:04:05.000"
+
+// fastFormatTime 手写渲染 "2006-01-02 15:04:05[.mmm]"，
+// 避免 time.Format 每次调用都逐块解析布局字符串。
+func fastFormatTime(t time.Time, ms bool) string {
+	year, month, day := t.Date()
+	if year < 0 || year > 9999 {
+		// 超出 4 位的年份回退标准库，保证任意时间正确
+		if ms {
+			return t.Format(DefaultTimeLayout)
+		}
+		return t.Format("2006-01-02 15:04:05")
+	}
+	hour, minute, sec := t.Clock()
+	b := make([]byte, 0, len(DefaultTimeLayout))
+	b = append(b, byte('0'+year/1000%10), byte('0'+year/100%10),
+		byte('0'+year/10%10), byte('0'+year%10), '-')
+	b = twoDigit(b, int(month))
+	b = append(b, '-')
+	b = twoDigit(b, day)
+	b = append(b, ' ')
+	b = twoDigit(b, hour)
+	b = append(b, ':')
+	b = twoDigit(b, minute)
+	b = append(b, ':')
+	b = twoDigit(b, sec)
+	if ms {
+		b = append(b, '.')
+		b = threeDigit(b, t.Nanosecond()/1e6)
+	}
+	return string(b)
+}
+
+// twoDigit 追加两位十进制数。
+func twoDigit(b []byte, v int) []byte {
+	return append(b, byte('0'+v/10), byte('0'+v%10))
+}
+
+// threeDigit 追加三位十进制数。
+func threeDigit(b []byte, v int) []byte {
+	return append(b, byte('0'+v/100), byte('0'+v/10%10), byte('0'+v%10))
 }
 
 // JsonFormat 以单行 JSON 输出，自动转义 msg/line 中的特殊字符，

@@ -67,7 +67,23 @@ func fieldValString(v any) string {
 	case time.Duration:
 		return x.String()
 	case time.Time:
-		return x.Format("2006-01-02 15:04:05.000")
+		return fastFormatTime(x, true)
+	case int:
+		return strconv.Itoa(x)
+	case int64:
+		return strconv.FormatInt(x, 10)
+	case int32:
+		return strconv.FormatInt(int64(x), 10)
+	case uint:
+		return strconv.FormatUint(uint64(x), 10)
+	case uint64:
+		return strconv.FormatUint(x, 10)
+	case bool:
+		return strconv.FormatBool(x)
+	case float64:
+		return strconv.FormatFloat(x, 'g', -1, 64)
+	case float32:
+		return strconv.FormatFloat(float64(x), 'g', -1, 32)
 	default:
 		return fmt.Sprintf("%v", v)
 	}

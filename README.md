@@ -474,6 +474,9 @@ func (p project) DeleteProject(projectId int64) error {
 异步通道写满时日志会被丢弃（不阻塞业务），并通过控制台周期性输出
 `[golog] N log messages dropped (async buffer full)` 告警。
 
+持续过载时可开启限流采样削峰：`SetRateLimit(10000, time.Second)`、
+`SetLogPriority(true, 100)`（重复日志只记首条）。
+
 ## 默认值一览
 
 | 配置项 | 默认值 | 说明 |
@@ -483,8 +486,8 @@ func (p project) DeleteProject(projectId int64) error {
 | 过期清理 | 7 天 | `SetExpireDuration` 修改 |
 | 时间布局 | `2006-01-02 15:04:05.000` | `SetTimeLayout` 修改 |
 | 时区 | 本地时区 | `SetUTC(true)` 切换 UTC |
-| 异步缓冲 | 1000 条 | 写满丢弃，不阻塞业务 |
-| 文件刷盘 | 4KB 或 200ms 批量 | 控制台输出立即打印 |
+| 异步缓冲 | 16384 条 | 写满丢弃，不阻塞业务 |
+| 文件刷盘 | 64KB 缓冲或 200ms 定时 | 控制台输出立即打印；正常退出 `Sync()` 强制刷盘 |
 | 归档压缩并发 | 2 | gzip 信号量限制 |
 | 过期清理周期 | 24 小时 | 自动执行 |
 

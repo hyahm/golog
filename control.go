@@ -49,6 +49,17 @@ func (task *task) control(cl msgLog) {
 	}
 }
 
+// flushFW 刷新文件写入缓冲到磁盘，由写协程定时调用。
+func (task *task) flushFW() {
+	task.fwMu.Lock()
+	defer task.fwMu.Unlock()
+	if task.fw != nil {
+		if err := task.fw.flush(); err != nil {
+			log.Println("golog: flush file failed:", err)
+		}
+	}
+}
+
 // syncWrite 绕过异步通道直接写入，用于 Fatal/Panic 等必须立即落盘的日志。
 func (task *task) syncWrite(ml msgLog) {
 	if ml.out {
@@ -61,6 +72,10 @@ func (task *task) syncWrite(ml msgLog) {
 		ml.out = true
 		task.cw.print(ml)
 		return
+	}
+	// 同步路径必须立即刷盘，保证进程退出前数据到达磁盘
+	if err := fw.flush(); err != nil {
+		log.Println("golog: flush file failed:", err)
 	}
 	if ml.console {
 		task.cw.print(ml)

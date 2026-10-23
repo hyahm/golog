@@ -22,7 +22,7 @@ type task struct {
 	reportedDrp atomic.Int64 // 上次汇报时的丢弃数
 
 	syncDo sync.Once
-	mu     sync.Mutex
+	mu     sync.RWMutex // 写锁保护关闭流程，读锁允许并发发送
 	closed bool
 }
 
@@ -32,7 +32,7 @@ var t *task
 // newTask 创建任务并初始化通道与控制台输出器（写协程由调用方启动）。
 func newTask() *task {
 	return &task{
-		cache:     make(chan msgLog, 1000),
+		cache:     make(chan msgLog, 16384),
 		exit:      make(chan struct{}),
 		handlerWg: &sync.WaitGroup{},
 		cw:        newConsoleWriter(),
@@ -46,35 +46,40 @@ func init() {
 
 // write 消费通道：控制台日志实时输出，文件日志批量（4KB 或 200ms）落盘。
 func (task *task) write() {
-	cl := msgLog{}
+	var buf []byte // 文件日志批量拼接缓冲，避免逐条字符串拼接分配
+	cl := msgLog{} // 当前批次的目录/文件名等元信息
+	flush := func() {
+		if len(buf) == 0 {
+			return
+		}
+		cl.Msg = string(buf)
+		task.control(cl)
+		buf = buf[:0]
+		cl = msgLog{}
+	}
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop() // 主函数退出前停止 Ticker，防止 goroutine 泄漏
 	for {
 		select {
 		case <-ticker.C:
 			// 不管有没有写满，200 毫秒必须刷盘
-			if len(cl.Msg) > 0 {
-				task.control(cl)
-				cl = msgLog{}
-			}
+			flush()
+			task.flushFW()
 			task.reportDropped()
 		case c, ok := <-task.cache:
 			if !ok {
 				// 通道关闭，刷盘后退出
-				if len(cl.Msg) > 0 {
-					task.control(cl)
-					cl = msgLog{}
-				}
+				flush()
 				task.reportDropped()
 				task.closeFW()
 				task.exit <- struct{}{}
 				return
 			}
-			c.Msg = c.format(c.Level, c.Ctime, c.Line, c.Msg, c.fields)
+			// Msg 已在生产端完成格式化
 			if c.out {
 				// 控制台日志加颜色实时打印
 				c.Color = GetColor(c.Level)
-				task.control(c)
+				task.cw.print(c)
 				continue
 			}
 			if c.console {
@@ -83,8 +88,8 @@ func (task *task) write() {
 				task.cw.print(c)
 			}
 			if cl.day != 0 && c.Ctime.Day() != cl.day {
-				task.control(cl)
-				cl = msgLog{}
+				// 跨天时前一批先落盘
+				flush()
 			}
 			cl.dir = c.dir
 			cl.out = c.out
@@ -94,14 +99,13 @@ func (task *task) write() {
 			cl.Ctime = c.Ctime
 			cl.size = c.size
 			cl.compress = c.compress
-			cl.Msg += c.Msg
+			buf = append(buf, c.Msg...)
 
-			if len(cl.Msg) < BLOCKSIZE {
+			if len(buf) < BLOCKSIZE {
 				// 缓存没满就继续
 				continue
 			}
-			task.control(cl)
-			cl = msgLog{}
+			flush()
 		}
 	}
 }
@@ -128,22 +132,21 @@ func SetExpireDuration(d time.Duration) {
 }
 
 // send 在通道未关闭时非阻塞写入日志；通道满时丢弃并计数，避免阻塞业务。
+// 持读锁可与并发发送共存，closeCache 持写锁等待所有在途发送完成。
 func (task *task) send(ml msgLog) {
-	task.mu.Lock()
+	task.mu.RLock()
+	defer task.mu.RUnlock()
 	if task.closed {
-		task.mu.Unlock()
 		return
 	}
 	select {
 	case task.cache <- ml:
-		task.mu.Unlock()
 	default:
-		task.mu.Unlock()
 		task.dropped.Add(1)
 	}
 }
 
-// closeCache 标记通道关闭并关闭 cache，保证与 send 互斥，防止重复 close。
+// closeCache 标记通道关闭并关闭 cache，写锁保证与 send 互斥，防止重复 close。
 func (task *task) closeCache() {
 	task.mu.Lock()
 	defer task.mu.Unlock()

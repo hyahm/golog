@@ -271,7 +271,7 @@ func (l *Log) prepare(level Level, msg, line string, fields []Field) (msgLog, *d
 	return ml, dup, smp
 }
 
-// dispatch 完成采样过滤、回调分发并投递到异步通道。
+// dispatch 完成采样过滤、回调分发，在生产端完成格式化后投递到异步通道。
 func (l *Log) dispatch(level Level, msg, line string, fields []Field) {
 	ml, dup, smp := l.prepare(level, msg, line, fields)
 	if dup != nil && !dup.addMsg(line+msg) {
@@ -281,10 +281,14 @@ func (l *Log) dispatch(level Level, msg, line string, fields []Field) {
 		return
 	}
 	if h := LogHandler; h != nil {
+		lvl, ct, ln, mg := ml.Level, ml.Ctime, ml.Line, ml.Msg
 		l.task.handlerWg.Go(func() {
-			h(ml.Level, ml.Ctime, ml.Line, ml.Msg)
+			h(lvl, ct, ln, mg)
 		})
 	}
+	// 生产端格式化，减轻消费端压力，提高通道消费速度
+	ml.Msg = ml.format(ml.Level, ml.Ctime, ml.Line, ml.Msg, ml.fields)
+	ml.fields = nil
 	l.task.send(ml)
 }
 

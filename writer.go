@@ -113,10 +113,17 @@ func (fw *fileWriter) write(ml msgLog) error {
 	}
 	n, err := fw.w.WriteString(ml.Msg)
 	fw.curSize += int64(n)
-	if err != nil {
-		return err
+	return err
+}
+
+// flush 刷新写缓冲到磁盘，不关闭文件句柄。
+func (fw *fileWriter) flush() error {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+	if fw.w != nil {
+		return fw.w.Flush()
 	}
-	return fw.w.Flush()
+	return nil
 }
 
 // open 打开/创建当前日志文件；按天切割模式下若存在历史文件先归档。
