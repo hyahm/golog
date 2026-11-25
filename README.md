@@ -78,7 +78,7 @@ func main() {
 
 | 配置项 | 时机要求 |
 | --- | --- |
-| `SetExpireDuration` | 必须在 `InitLogger` / `NewLog` 之前调用 |
+| `SetExpireDuration` | 任意时机，设置全局默认过期时长；实例可用 `(*Log).SetExpireDuration` 单独设置 |
 | `ShowBasePath`、`LogHandler` | 应在首次打印日志前设置 |
 | `SetDir` | 应在 `InitLogger` / `NewLog` 之前调用才能生效到文件路径 |
 | 其余 `SetLevel` / `SetConsole` 等 | 任意时机，运行中修改并发安全 |
@@ -243,7 +243,7 @@ func main() {
 
 - `defer golog.Sync()`：等待异步日志全部落盘，可重复调用；纯控制台输出模式日志即时可见，可不调用
 - `NewLog` 创建的独立实例：实例停止服务（而非进程退出）时必须调用其 `Sync()` 停止内部协程
-- `Fatal` 系列自带同步落盘并 `os.Exit(1)`，无需额外处理
+- `Fatal` 系列自动先排空积压的异步日志再同步落盘并 `os.Exit(1)`，无需额外处理
 - 异常 panic 场景可配合 `recover` 使用 `golog.Stack()` 保留现场堆栈：
 
 ```go
@@ -279,7 +279,7 @@ golog.Debug / Debugf / Debugw
 golog.Info  / Infof  / Infow
 golog.Warn  / Warnf  / Warnw
 golog.Error / Errorf / Errorw
-golog.Fatal / Fatalf / Fatalw  // 同步写盘（保证落盘）后 os.Exit(1)
+golog.Fatal / Fatalf / Fatalw  // 先排空积压异步日志，再同步写盘后 os.Exit(1)
 golog.Panic / Panicf           // 同步写盘后 panic
 ```
 
@@ -401,7 +401,7 @@ golog.SetLogPriority(true, 100, time.Minute) // 每分钟 100 条重复日志只
 ## Fatal / Panic / Stack
 
 ```go
-// Fatal/Fatalf/Fatalw: 同步写盘（保证落盘）后 os.Exit(1)
+// Fatal/Fatalf/Fatalw: 先排空积压异步日志，再同步写盘（保证落盘）后 os.Exit(1)
 golog.Fatalf("bad thing: %v", err)
 
 // Panic/Panicf: 同步写盘后 panic
@@ -483,7 +483,8 @@ func (p project) DeleteProject(projectId int64) error {
 | --- | --- | --- |
 | 日志级别 | `INFO` | `SetLevel` 修改 |
 | 日志目录 | `log` | `SetDir` 修改 |
-| 过期清理 | 7 天 | `SetExpireDuration` 修改 |
+| 过期清理 | 7 天 | 全局 `SetExpireDuration` 修改；实例 `(*Log).SetExpireDuration` 单独覆盖 |
+| 清理间隔 | 24 小时 | `SetCleanInterval` 修改，运行中生效；`CleanNow` 手动触发一次清理 |
 | 时间布局 | `2006-01-02 15:04:05.000` | `SetTimeLayout` 修改 |
 | 时区 | 本地时区 | `SetUTC(true)` 切换 UTC |
 | 异步缓冲 | 16384 条 | 写满丢弃，不阻塞业务 |
@@ -494,6 +495,6 @@ func (p project) DeleteProject(projectId int64) error {
 ## 异步架构说明
 
 - 普通 日志走异步缓冲通道，由后台 goroutine 消费写盘，业务调用零阻塞
-- `Fatal / Panic` 系列绕过异步通道同步写盘，保证进程退出前日志可见
+- `Fatal` 系列退出前先排空异步通道中积压的日志，再绕过通道同步写盘，保证退出前所有日志可见且时序正确
 - 归档压缩为异步执行，并发受信号量（2）限制，不抢占写盘
 - `Sync()` 可重复调用，用于退出前强制刷盘（控制台模式无需调用）

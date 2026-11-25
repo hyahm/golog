@@ -124,7 +124,8 @@ func (task *task) reportDropped() {
 
 var _expireClean time.Duration = time.Hour * 24 * 7
 
-// SetExpireDuration 设置过期清理时间，默认 7 天，须在 InitLogger 前调用。
+// SetExpireDuration 设置全局默认的过期清理时间，默认 7 天。
+// 未单独设置过期时长的日志实例（含全局日志）均使用该值。
 func SetExpireDuration(d time.Duration) {
 	if d > 0 {
 		_expireClean = d

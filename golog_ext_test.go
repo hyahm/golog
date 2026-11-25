@@ -30,6 +30,47 @@ func newTmpDir(t *testing.T) string {
 	return td
 }
 
+// TestInstanceExpireDuration 验证实例可单独设置过期时长，
+// 未设置的实例跟随全局值。
+func TestInstanceExpireDuration(t *testing.T) {
+	td := newTmpDir(t)
+
+	l := NewLog("expire_a.log", 0, false)
+	l.Infof("hello")
+	l.Sync()
+	if _, err := os.Stat(filepath.Join(td, "expire_a.log")); err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+
+	// 实例设置 1 秒过期，全局保持默认 7 天
+	l.SetExpireDuration(time.Second)
+	mu.RLock()
+	got := _names["expire_a.log"]
+	mu.RUnlock()
+	if got != time.Second {
+		t.Fatalf("instance expire = %v, want 1s", got)
+	}
+
+	// 未单独设置的实例注册时长为 0，清理时跟随全局值
+	l2 := NewLog("expire_b.log", 0, false)
+	l2.Sync()
+	mu.RLock()
+	got2 := _names["expire_b.log"]
+	mu.RUnlock()
+	if got2 != 0 {
+		t.Fatalf("unset instance expire = %v, want 0 (follow global)", got2)
+	}
+
+	// 非法值被忽略
+	l.SetExpireDuration(-time.Second)
+	mu.RLock()
+	got3 := _names["expire_a.log"]
+	mu.RUnlock()
+	if got3 != time.Second {
+		t.Fatalf("negative expire should be ignored, got %v", got3)
+	}
+}
+
 func TestJsonFormatEscape(t *testing.T) {
 	msg := "he said \"hi\"\nsecond line\ttab"
 	line := "a_b.go:1 \"quoted\""
@@ -104,6 +145,31 @@ func TestFatalSyncFlushBeforeExit(t *testing.T) {
 	// 同步写路径：无需 Sync 即应可见
 	if !strings.Contains(buf.String(), "boom fatal") {
 		t.Fatalf("fatal log not flushed before exit: %q", buf.String())
+	}
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1", code)
+	}
+}
+
+func TestFatalFlushesPendingAsyncLogs(t *testing.T) {
+	var buf bytes.Buffer
+	l := newBufLog(&buf)
+	code := 0
+	exitFunc = func(c int) { code = c }
+	defer func() { exitFunc = os.Exit }()
+
+	l.Info("pending before fatal") // 进入异步通道，可能尚未落盘
+	l.Fatal("boom fatal")
+
+	out := buf.String()
+	if !strings.Contains(out, "pending before fatal") {
+		t.Fatalf("pending async log not flushed before exit: %q", out)
+	}
+	if !strings.Contains(out, "boom fatal") {
+		t.Fatalf("fatal log not flushed before exit: %q", out)
+	}
+	if strings.Index(out, "pending before fatal") > strings.Index(out, "boom fatal") {
+		t.Fatalf("pending logs should be flushed before fatal log: %q", out)
 	}
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1", code)

@@ -55,7 +55,7 @@ func InitLogger(name string, size int64, everyday bool) {
 		}
 	}
 	getDefaultLog().initFile(filepath.Base(name), size, everyday)
-	addClean(filepath.Base(name))
+	addClean(0, filepath.Base(name))
 }
 
 // SetConsole 设置全局写文件时是否同时输出到控制台，默认 false。
@@ -130,13 +130,13 @@ func Errorf(format string, args ...any) { getDefaultLog().Errorf(format, args...
 // Errorw 打印 ERROR 级别日志并附加结构化字段（全局）。
 func Errorw(msg string, fields ...Field) { getDefaultLog().Errorw(msg, fields...) }
 
-// Fatal 同步写入 FATAL 级别日志（保证落盘）并以退出码 1 结束进程。
+// Fatal 先排空积压的异步日志后同步写入 FATAL 级别日志（保证落盘）并以退出码 1 结束进程。
 func Fatal(msg ...any) { getDefaultLog().Fatal(msg...) }
 
-// Fatalf 同步写入 FATAL 级别格式化日志并结束进程。
+// Fatalf 先排空积压的异步日志后，同步写入 FATAL 级别格式化日志并结束进程。
 func Fatalf(format string, args ...any) { getDefaultLog().Fatalf(format, args...) }
 
-// Fatalw 同步写入 FATAL 级别日志（含结构化字段）并结束进程。
+// Fatalw 先排空积压的异步日志后，同步写入 FATAL 级别日志（含结构化字段）并结束进程。
 func Fatalw(msg string, fields ...Field) { getDefaultLog().Fatalw(msg, fields...) }
 
 // Panic 同步写入 PANIC 级别日志（保证落盘）后 panic。

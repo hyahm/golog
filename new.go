@@ -32,7 +32,8 @@ type Log struct {
 	fields     []Field      // With 附加的结构化字段
 	loggerName string       // Named 设置的模块名
 	ctx        context.Context
-	extraSkip  int // 全局包装函数额外增加的调用栈深度
+	extraSkip  int           // 全局包装函数额外增加的调用栈深度
+	expire     time.Duration // 本实例日志文件过期清理时长，0 表示跟随全局值
 
 	task        *task
 	logPriority bool
@@ -86,7 +87,7 @@ func NewLog(name string, size int64, everyday bool) *Log {
 	}
 	l.level.Store(int32(getDefaultLog().Level()))
 	go l.task.write()
-	addClean(l.name)
+	addClean(l.expire, l.name)
 	return l
 }
 
@@ -106,6 +107,7 @@ func (l *Log) clone() *Log {
 		loggerName:  l.loggerName,
 		ctx:         l.ctx,
 		extraSkip:   l.extraSkip,
+		expire:      l.expire,
 		task:        l.task,
 		logPriority: l.logPriority,
 		duplicates:  l.duplicates,
@@ -221,6 +223,22 @@ func (l *Log) SetDir(dir string) {
 	l.mu.Lock()
 	l.dir = dir
 	l.mu.Unlock()
+}
+
+// SetExpireDuration 设置当前实例日志文件的过期清理时间，默认跟随全局值（7 天）。
+// 可在 NewLog 之后任意时刻调用，运行时并发安全；仅对写文件的实例生效。
+// 多个实例写同一文件名时，以最后一次设置的值为准。
+func (l *Log) SetExpireDuration(d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	l.mu.Lock()
+	l.expire = d
+	name := l.name
+	l.mu.Unlock()
+	if name != "" {
+		setCleanExpire(name, d)
+	}
 }
 
 // initFile 由全局 InitLogger 调用，设置全局实例的文件输出参数。
@@ -448,24 +466,26 @@ func (l *Log) Errorw(msg string, fields ...Field) {
 	}
 }
 
-// Fatal 同步写入 FATAL 级别日志（保证落盘）并以退出码 1 结束进程。
+// Fatal 先排空此前积压的异步日志（保证按时间顺序全部落盘），
+// 再同步写入 FATAL 级别日志，并以退出码 1 结束进程。
 func (l *Log) Fatal(msg ...any) {
-	if l.enabled(FATAL) {
-		l.logSync(FATAL, arrToString(msg...), nil)
-	}
-	exitFunc(1)
+	l.fatalExit(arrToString(msg...), nil)
 }
 
-// Fatalf 同步写入 FATAL 级别格式化日志并结束进程。
+// Fatalf 先排空积压的异步日志后，同步写入 FATAL 级别格式化日志并结束进程。
 func (l *Log) Fatalf(format string, args ...any) {
-	if l.enabled(FATAL) {
-		l.logSync(FATAL, fmt.Sprintf(format, args...), nil)
-	}
-	exitFunc(1)
+	l.fatalExit(fmt.Sprintf(format, args...), nil)
 }
 
-// Fatalw 同步写入 FATAL 级别日志（含结构化字段）并结束进程。
+// Fatalw 先排空积压的异步日志后，同步写入 FATAL 级别日志（含结构化字段）并结束进程。
 func (l *Log) Fatalw(msg string, fields ...Field) {
+	l.fatalExit(msg, fields)
+}
+
+// fatalExit 退出前收尾流程：先等待异步通道中尚未落盘的日志全部写完（保持时序），
+// 再同步写入 FATAL 日志并立即刷盘，最后以退出码 1 结束进程。
+func (l *Log) fatalExit(msg string, fields []Field) {
+	l.Sync()
 	if l.enabled(FATAL) {
 		l.logSync(FATAL, msg, fields)
 	}
